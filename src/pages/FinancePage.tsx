@@ -1,16 +1,30 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Card, Divider, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { api, formatBRL, type Service } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
 import { PaymentBadge } from "@/src/components/shared/StatusBadges";
 import { StatCard } from "@/src/components/shared/StatCard";
-import { financialSummary, formatBRL, mockServices } from "@/lib/mock-data";
 
 export default function FinancePage() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const [services, setServices] = useState<Service[]>([]);
+
+  useEffect(() => {
+    api.getServices().then(setServices).catch(() => setServices([]));
+  }, []);
+
+  const financialSummary = useMemo(() => {
+    const totalRecebido = services.filter((s) => s.payment === "pago").reduce((a, s) => a + s.price, 0);
+    const totalAdiantado = services.filter((s) => s.payment === "adiantado").reduce((a, s) => a + s.price, 0);
+    const totalPendente = services.filter((s) => s.payment === "pendente").reduce((a, s) => a + s.price, 0);
+    return { totalRecebido, totalAdiantado, totalPendente };
+  }, [services]);
+
   const total = financialSummary.totalRecebido + financialSummary.totalAdiantado;
 
   return (
@@ -60,19 +74,19 @@ export default function FinancePage() {
       <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
         <Card.Title title="Pagamentos por cliente" />
         <Card.Content style={{ paddingHorizontal: 0 }}>
-          {mockServices.map((s, index) => (
+          {services.map((s, index) => (
             <View key={s.id}>
               {index > 0 ? <Divider style={{ marginVertical: 4 }} /> : null}
               <View style={styles.row}>
                 <View style={{ flex: 1, minWidth: 0, paddingHorizontal: 16, gap: 4 }}>
                   <Text variant="titleSmall" numberOfLines={1}>
-                    {s.clientName}
+                    {s.client?.name ?? "-"}
                   </Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
                     {s.title}
                   </Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
-                    {s.carLabel}
+                    {(s.car && `${s.car.model} — ${s.car.plate}`) || "-"}
                   </Text>
                   <View style={{ marginTop: 6 }}>
                     <PaymentBadge status={s.payment} />

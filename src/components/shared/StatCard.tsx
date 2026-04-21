@@ -53,7 +53,14 @@ export function StatCard({ label, value, icon, hint, variant = "default" }: Stat
           <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, letterSpacing: 0.5 }}>
             {label.toUpperCase()}
           </Text>
-          <Text variant="headlineSmall" style={[styles.value, { color: theme.colors.onSurface }]} numberOfLines={1}>
+          <Text
+            variant="headlineSmall"
+            style={[styles.value, { color: theme.colors.onSurface }]}
+            numberOfLines={1}
+            ellipsizeMode="clip"
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
             {value}
           </Text>
           {hint ? (
@@ -88,6 +95,7 @@ const styles = StyleSheet.create({
   value: {
     marginTop: 6,
     fontWeight: "700",
+    flexShrink: 1,
   },
   iconBox: {
     width: 44,

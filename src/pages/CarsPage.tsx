@@ -1,16 +1,22 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Chip, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { api, type Car } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
-import { mockCars } from "@/lib/mock-data";
 
 export default function CarsPage() {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [cars, setCars] = useState<Car[]>([]);
+
+  useEffect(() => {
+    api.getCars().then(setCars).catch(() => setCars([]));
+  }, []);
 
   return (
     <ScrollView
@@ -28,7 +34,7 @@ export default function CarsPage() {
       />
 
       <View style={styles.grid}>
-        {mockCars.map((car) => (
+        {cars.map((car) => (
           <Card key={car.id} mode="outlined" style={[styles.card, { borderColor: theme.colors.outlineVariant }]}>
             <Card.Content style={{ gap: 10 }}>
               <View style={styles.cardTop}>
@@ -54,7 +60,7 @@ export default function CarsPage() {
                 <View style={styles.metaItem}>
                   <MaterialCommunityIcons name="account" size={14} color="#B8860B" />
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
-                    {car.clientName}
+                    {car.client?.name ?? "-"}
                   </Text>
                 </View>
               </View>

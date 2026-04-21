@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shop {
+  id        String    @id @default(cuid())
+  name      String
+  apiKey    String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  users     User[]
+  clients   Client[]
+  cars      Car[]
+  services  Service[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  shopId       String
+  shop         Shop     @relation(fields: [shopId], references: [id])
+  name         String
+  email        String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@unique([shopId, email])
+  @@index([shopId])
+}
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String
+  createdAt DateTime  @default(now())
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id])
+  cars      Car[]
+  services  Service[]
+
+  @@index([shopId])
+}
+
+model Car {
+  id       String   @id @default(cuid())
+  name     String
+  model    String
+  plate    String
+  year     Int
+  clientId String
+  shopId   String
+  shop     Shop     @relation(fields: [shopId], references: [id])
+  client   Client   @relation(fields: [clientId], references: [id])
+  services Service[]
+
+  @@unique([shopId, plate])
+  @@index([shopId])
+}
+
+model Service {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  status      ServiceStatus @default(a_fazer)
+  payment     PaymentStatus @default(pendente)
+  price       Float
+  dueDate     DateTime
+  carId       String
+  clientId    String
+  createdAt   DateTime      @default(now())
+  shopId      String
+  shop        Shop          @relation(fields: [shopId], references: [id])
+  car         Car           @relation(fields: [carId], references: [id])
+  client      Client        @relation(fields: [clientId], references: [id])
+
+  @@index([shopId])
+}
+
+enum ServiceStatus {
+  a_fazer
+  em_andamento
+  concluido
+}
+
+enum PaymentStatus {
+  pago
+  pendente
+  adiantado
+}

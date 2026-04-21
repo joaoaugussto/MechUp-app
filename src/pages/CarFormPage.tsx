@@ -1,11 +1,11 @@
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Menu, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { api, type Car, type Client } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
-import { mockCars, mockClients } from "@/lib/mock-data";
 
 export interface CarFormPageProps {
   carId?: string;
@@ -16,21 +16,54 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const editing = Boolean(carId);
-  const existing = editing ? mockCars.find((c) => c.id === carId) : undefined;
-
-  const [name, setName] = useState(existing?.name ?? "");
-  const [model, setModel] = useState(existing?.model ?? "");
-  const [plate, setPlate] = useState(existing?.plate ?? "");
-  const [year, setYear] = useState(existing ? String(existing.year) : "");
-  const [clientId, setClientId] = useState(existing?.clientId ?? mockClients[0]?.id ?? "");
+  const [cars, setCars] = useState<Car[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [name, setName] = useState("");
+  const [model, setModel] = useState("");
+  const [plate, setPlate] = useState("");
+  const [year, setYear] = useState("");
+  const [clientId, setClientId] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [snack, setSnack] = useState(false);
+  const [snackMsg, setSnackMsg] = useState("");
 
-  const clientLabel = useMemo(() => mockClients.find((c) => c.id === clientId)?.name ?? "Selecione um cliente", [clientId]);
+  useEffect(() => {
+    api.getClients().then((data) => {
+      setClients(data);
+      if (!clientId && data[0]) setClientId(data[0].id);
+    });
+    api.getCars().then(setCars);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const submit = () => {
-    // TODO: API
-    setSnack(true);
+  useEffect(() => {
+    if (!carId || cars.length === 0) return;
+    const existing = cars.find((c) => c.id === carId);
+    if (!existing) return;
+    setName(existing.name);
+    setModel(existing.model);
+    setPlate(existing.plate);
+    setYear(String(existing.year));
+    setClientId(existing.clientId);
+  }, [carId, cars]);
+
+  const clientLabel = useMemo(() => clients.find((c) => c.id === clientId)?.name ?? "Selecione um cliente", [clientId, clients]);
+
+  const submit = async () => {
+    try {
+      const payload = { name, model, plate, year: Number(year), clientId };
+      if (editing && carId) {
+        await api.updateCar(carId, payload);
+        setSnackMsg("Carro atualizado com sucesso.");
+      } else {
+        await api.createCar(payload);
+        setSnackMsg("Carro cadastrado com sucesso.");
+      }
+    } catch {
+      setSnackMsg("Erro ao salvar carro. Verifique a API e tente novamente.");
+    } finally {
+      setSnack(true);
+    }
   };
 
   return (
@@ -55,7 +88,7 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
 
             <Text variant="labelLarge">Cliente</Text>
             <Menu visible={menuOpen} onDismiss={() => setMenuOpen(false)} anchor={<Button mode="outlined" onPress={() => setMenuOpen(true)}>{clientLabel}</Button>}>
-              {mockClients.map((c) => (
+              {clients.map((c) => (
                 <Menu.Item key={c.id} onPress={() => { setClientId(c.id); setMenuOpen(false); }} title={c.name} />
               ))}
             </Menu>
@@ -65,7 +98,23 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
                 {editing ? "Salvar alterações" : "Cadastrar carro"}
               </Button>
               {editing ? (
-                <Button mode="outlined" textColor={theme.colors.error} icon="delete" onPress={() => setSnack(true)}>
+                <Button
+                  mode="outlined"
+                  textColor={theme.colors.error}
+                  icon="delete"
+                  onPress={async () => {
+                    try {
+                      if (!carId) return;
+                      await api.deleteCar(carId);
+                      setSnackMsg("Carro excluído com sucesso.");
+                      setSnack(true);
+                      router.back();
+                    } catch {
+                      setSnackMsg("Erro ao excluir carro.");
+                      setSnack(true);
+                    }
+                  }}
+                >
                   Excluir
                 </Button>
               ) : null}
@@ -74,7 +123,7 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
         </Card>
       </ScrollView>
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2000}>
-        {editing ? "Carro atualizado (mock)." : "Carro cadastrado (mock)."}
+        {snackMsg}
       </Snackbar>
     </>
   );

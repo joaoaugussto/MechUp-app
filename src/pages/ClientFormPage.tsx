@@ -1,11 +1,11 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Snackbar, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { api } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
-import { mockClients } from "@/lib/mock-data";
 
 export interface ClientFormPageProps {
   /** Quando definido, formulário de edição (mock). */
@@ -17,15 +17,33 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const editing = Boolean(clientId);
-  const existing = editing ? mockClients.find((c) => c.id === clientId) : undefined;
-
-  const [name, setName] = useState(existing?.name ?? "");
-  const [phone, setPhone] = useState(existing?.phone ?? "");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [snack, setSnack] = useState(false);
+  const [snackMsg, setSnackMsg] = useState("");
 
-  const submit = () => {
-    // TODO: API POST/PUT
-    setSnack(true);
+  useEffect(() => {
+    if (!clientId) return;
+    api.getClient(clientId).then((client) => {
+      setName(client.name);
+      setPhone(client.phone);
+    });
+  }, [clientId]);
+
+  const submit = async () => {
+    try {
+      if (editing && clientId) {
+        await api.updateClient(clientId, { name, phone });
+        setSnackMsg("Cliente atualizado com sucesso.");
+      } else {
+        await api.createClient({ name, phone });
+        setSnackMsg("Cliente cadastrado com sucesso.");
+      }
+    } catch {
+      setSnackMsg(`Erro ao salvar cliente. Verifique a API e tente novamente.`);
+    } finally {
+      setSnack(true);
+    }
   };
 
   return (
@@ -53,7 +71,23 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
                 {editing ? "Salvar alterações" : "Cadastrar cliente"}
               </Button>
               {editing ? (
-                <Button mode="outlined" textColor={theme.colors.error} icon="delete" onPress={() => setSnack(true)}>
+                <Button
+                  mode="outlined"
+                  textColor={theme.colors.error}
+                  icon="delete"
+                  onPress={async () => {
+                    try {
+                      if (!clientId) return;
+                      await api.deleteClient(clientId);
+                      setSnackMsg("Cliente excluído com sucesso.");
+                      setSnack(true);
+                      router.back();
+                    } catch {
+                      setSnackMsg("Erro ao excluir cliente.");
+                      setSnack(true);
+                    }
+                  }}
+                >
                   Excluir
                 </Button>
               ) : null}
@@ -62,7 +96,7 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
         </Card>
       </ScrollView>
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2000}>
-        {editing ? "Cliente atualizado (mock)." : "Cliente cadastrado (mock)."}
+        {snackMsg}
       </Snackbar>
     </>
   );

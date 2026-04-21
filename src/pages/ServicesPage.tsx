@@ -1,14 +1,14 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, IconButton, SegmentedButtons, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { api, formatBRL, type Service, type ServiceStatus } from "@/lib/api";
 import { EmptyState } from "@/src/components/shared/EmptyState";
 import { PageHeader } from "@/src/components/shared/PageHeader";
 import { PaymentBadge, ServiceStatusBadge } from "@/src/components/shared/StatusBadges";
-import { formatBRL, mockServices, type ServiceStatus } from "@/lib/mock-data";
 
 type Filter = "todos" | ServiceStatus;
 
@@ -17,8 +17,13 @@ export default function ServicesPage() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<Filter>("a_fazer");
+  const [services, setServices] = useState<Service[]>([]);
 
-  const list = filter === "todos" ? mockServices : mockServices.filter((s) => s.status === filter);
+  useEffect(() => {
+    api.getServices().then(setServices).catch(() => setServices([]));
+  }, []);
+
+  const list = filter === "todos" ? services : services.filter((s) => s.status === filter);
 
   return (
     <ScrollView
@@ -73,7 +78,7 @@ export default function ServicesPage() {
                       {s.title}
                     </Text>
                     <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
-                      {s.clientName} · {s.carLabel}
+                      {s.client?.name ?? "-"} · {(s.car && `${s.car.model} — ${s.car.plate}`) || "-"}
                     </Text>
                     <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
                       Vence: {new Date(s.dueDate).toLocaleDateString("pt-BR")}

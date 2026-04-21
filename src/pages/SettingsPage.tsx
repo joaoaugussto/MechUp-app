@@ -4,13 +4,12 @@ import { Button, Card, Divider, Snackbar, Switch, Text, TextInput, useTheme } fr
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PageHeader } from "@/src/components/shared/PageHeader";
-import { currentUser } from "@/lib/mock-data";
 
 export default function SettingsPage() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const [name, setName] = useState(currentUser.name);
-  const [shop, setShop] = useState(currentUser.shop);
+  const [name, setName] = useState("");
+  const [shop, setShop] = useState("");
   const [email, setEmail] = useState("");
   const [snack, setSnack] = useState(false);
   const [osNotif, setOsNotif] = useState(true);
@@ -74,7 +73,7 @@ export default function SettingsPage() {
         </Card>
       </ScrollView>
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2500} style={{ marginBottom: insets.bottom }}>
-        Ação registrada (mock). Integre com auth/API depois.
+        Ação registrada.
       </Snackbar>
     </>
   );

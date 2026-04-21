@@ -1,4 +1,4 @@
-import type { PaymentStatus, ServiceStatus } from "@/lib/mock-data";
+import type { PaymentStatus, ServiceStatus } from "@/lib/api";
 import { StyleSheet } from "react-native";
 import type { MD3Theme } from "react-native-paper/lib/typescript/types";
 import { Chip, useTheme } from "react-native-paper";

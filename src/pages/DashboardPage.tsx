@@ -1,29 +1,40 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { MD3Theme } from "react-native-paper/lib/typescript/types";
 import { Button, Card, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { api, formatBRL, type Car, type Client, type Service } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
 import { PaymentBadge, ServiceStatusBadge } from "@/src/components/shared/StatusBadges";
 import { StatCard } from "@/src/components/shared/StatCard";
-import {
-  currentUser,
-  financialSummary,
-  formatBRL,
-  mockCars,
-  mockClients,
-  mockServices,
-} from "@/lib/mock-data";
 
 export default function DashboardPage() {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [clients, setClients] = useState<Client[]>([]);
+  const [cars, setCars] = useState<Car[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
 
-  const upcoming = mockServices.filter((s) => s.status !== "concluido").slice(0, 5);
+  useEffect(() => {
+    api.getClients().then(setClients).catch(() => setClients([]));
+    api.getCars().then(setCars).catch(() => setCars([]));
+    api.getServices().then(setServices).catch(() => setServices([]));
+  }, []);
+
+  const financialSummary = useMemo(() => {
+    const totalRecebido = services.filter((s) => s.payment === "pago").reduce((a, s) => a + s.price, 0);
+    const totalAdiantado = services.filter((s) => s.payment === "adiantado").reduce((a, s) => a + s.price, 0);
+    const totalPendente = services.filter((s) => s.payment === "pendente").reduce((a, s) => a + s.price, 0);
+    const servicosAbertos = services.filter((s) => s.status !== "concluido").length;
+    return { totalRecebido, totalAdiantado, totalPendente, servicosAbertos };
+  }, [services]);
+
+  const upcoming = services.filter((s) => s.status !== "concluido").slice(0, 5);
 
   return (
     <ScrollView
@@ -32,8 +43,8 @@ export default function DashboardPage() {
       keyboardShouldPersistTaps="handled"
     >
       <PageHeader
-        title={`Olá, ${currentUser.name} 👋`}
-        description={`Aqui está o resumo da ${currentUser.shop} hoje.`}
+        title="Olá 👋"
+        description="Aqui está o resumo da sua oficina hoje."
         action={
           <Button mode="contained" icon="plus" onPress={() => router.push("/servico/novo")}>
             Nova OS
@@ -73,7 +84,7 @@ export default function DashboardPage() {
           <StatCard
             label="OS abertas"
             value={financialSummary.servicosAbertos}
-            hint={`${mockClients.length} clientes · ${mockCars.length} carros`}
+            hint={`${clients.length} clientes · ${cars.length} carros`}
             variant="default"
             icon={<MaterialCommunityIcons name="wrench" size={22} color={theme.colors.onSurfaceVariant} />}
           />
@@ -98,7 +109,7 @@ export default function DashboardPage() {
                     {s.title}
                   </Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
-                    {s.clientName} · {s.carLabel}
+                    {s.client?.name ?? "-"} · {(s.car && `${s.car.model} — ${s.car.plate}`) || "-"}
                   </Text>
                 </View>
                 <View style={styles.badges}>

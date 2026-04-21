@@ -1,11 +1,11 @@
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Menu, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { api, type Car, type PaymentStatus, type Service, type ServiceStatus } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
-import { mockCars, mockServices, type PaymentStatus, type ServiceStatus } from "@/lib/mock-data";
 
 export interface ServiceFormPageProps {
   serviceId?: string;
@@ -28,29 +28,79 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const editing = Boolean(serviceId);
-  const existing = editing ? mockServices.find((s) => s.id === serviceId) : undefined;
+  const [cars, setCars] = useState<Car[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
 
-  const [title, setTitle] = useState(existing?.title ?? "");
-  const [description, setDescription] = useState(existing?.description ?? "");
-  const [carId, setCarId] = useState(existing?.carId ?? mockCars[0]?.id ?? "");
-  const [price, setPrice] = useState(existing ? String(existing.price) : "");
-  const [status, setStatus] = useState<ServiceStatus>(existing?.status ?? "a_fazer");
-  const [payment, setPayment] = useState<PaymentStatus>(existing?.payment ?? "pendente");
-  const [dueDate, setDueDate] = useState(existing?.dueDate ?? "");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [carId, setCarId] = useState("");
+  const [price, setPrice] = useState("");
+  const [status, setStatus] = useState<ServiceStatus>("a_fazer");
+  const [payment, setPayment] = useState<PaymentStatus>("pendente");
+  const [dueDate, setDueDate] = useState("");
 
   const [carMenu, setCarMenu] = useState(false);
   const [statusMenu, setStatusMenu] = useState(false);
   const [payMenu, setPayMenu] = useState(false);
   const [snack, setSnack] = useState(false);
+  const [snackMsg, setSnackMsg] = useState("");
+
+  useEffect(() => {
+    api.getCars().then((data) => {
+      setCars(data);
+      if (!serviceId && data[0]) setCarId(data[0].id);
+    });
+    api.getServices().then(setServices);
+  }, [serviceId]);
+
+  useEffect(() => {
+    if (!serviceId || services.length === 0) return;
+    const existing = services.find((s) => s.id === serviceId);
+    if (!existing) return;
+    setTitle(existing.title);
+    setDescription(existing.description);
+    setCarId(existing.carId);
+    setPrice(String(existing.price));
+    setStatus(existing.status);
+    setPayment(existing.payment);
+    setDueDate(existing.dueDate.slice(0, 10));
+  }, [serviceId, services]);
 
   const carLabel = useMemo(() => {
-    const c = mockCars.find((x) => x.id === carId);
-    return c ? `${c.model} — ${c.plate} (${c.clientName})` : "Selecione um carro";
-  }, [carId]);
+    const c = cars.find((x) => x.id === carId);
+    return c ? `${c.model} — ${c.plate} (${c.client?.name ?? "-"})` : "Selecione um carro";
+  }, [carId, cars]);
 
-  const submit = () => {
-    // TODO: API
-    setSnack(true);
+  const submit = async () => {
+    try {
+      const selectedCar = cars.find((car) => car.id === carId);
+      if (!selectedCar) {
+        setSnackMsg("Selecione um carro.");
+        setSnack(true);
+        return;
+      }
+      const payload = {
+        title,
+        description,
+        carId,
+        clientId: selectedCar.clientId,
+        status,
+        payment,
+        price: Number(price),
+        dueDate,
+      };
+      if (editing && serviceId) {
+        await api.updateService(serviceId, payload);
+        setSnackMsg("Serviço atualizado com sucesso.");
+      } else {
+        await api.createService(payload);
+        setSnackMsg("Serviço cadastrado com sucesso.");
+      }
+    } catch {
+      setSnackMsg("Erro ao salvar serviço. Verifique a API e tente novamente.");
+    } finally {
+      setSnack(true);
+    }
   };
 
   return (
@@ -76,7 +126,7 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
 
             <Text variant="labelLarge">Carro</Text>
             <Menu visible={carMenu} onDismiss={() => setCarMenu(false)} anchor={<Button mode="outlined" onPress={() => setCarMenu(true)}>{carLabel}</Button>}>
-              {mockCars.map((c) => (
+              {cars.map((c) => (
                 <Menu.Item
                   key={c.id}
                   onPress={() => {
@@ -111,7 +161,23 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
                 {editing ? "Salvar alterações" : "Cadastrar OS"}
               </Button>
               {editing ? (
-                <Button mode="outlined" textColor={theme.colors.error} icon="delete" onPress={() => setSnack(true)}>
+                <Button
+                  mode="outlined"
+                  textColor={theme.colors.error}
+                  icon="delete"
+                  onPress={async () => {
+                    try {
+                      if (!serviceId) return;
+                      await api.deleteService(serviceId);
+                      setSnackMsg("Serviço excluído com sucesso.");
+                      setSnack(true);
+                      router.back();
+                    } catch {
+                      setSnackMsg("Erro ao excluir serviço.");
+                      setSnack(true);
+                    }
+                  }}
+                >
                   Excluir
                 </Button>
               ) : null}
@@ -120,7 +186,7 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
         </Card>
       </ScrollView>
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2000}>
-        {editing ? "Serviço atualizado (mock)." : "Serviço cadastrado (mock)."}
+        {snackMsg}
       </Snackbar>
     </>
   );

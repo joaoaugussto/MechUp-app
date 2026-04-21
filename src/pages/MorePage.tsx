@@ -4,10 +4,13 @@ import { ScrollView, StyleSheet } from "react-native";
 import { Card, List, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useAuth } from "@/src/auth/AuthProvider";
+
 export default function MorePage() {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { logout } = useAuth();
 
   return (
     <ScrollView
@@ -43,6 +46,16 @@ export default function MorePage() {
             left={(p) => <List.Icon {...p} icon="layers" />}
             right={() => <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.onSurfaceVariant} />}
             onPress={() => router.push("/modal")}
+          />
+          <List.Item
+            title="Sair"
+            description="Encerrar sessão desta oficina"
+            left={(p) => <List.Icon {...p} icon="logout" color={theme.colors.error} />}
+            right={() => <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.error} />}
+            onPress={async () => {
+              await logout();
+              router.replace("/login");
+            }}
           />
         </Card.Content>
       </Card>

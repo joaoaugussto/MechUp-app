@@ -1,20 +1,25 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, IconButton, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useState } from "react";
 
+import { api, type Client } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
-import { mockClients } from "@/lib/mock-data";
 
 export default function ClientsPage() {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
+  const [clients, setClients] = useState<Client[]>([]);
 
-  const filtered = mockClients.filter(
+  useEffect(() => {
+    api.getClients().then(setClients).catch(() => setClients([]));
+  }, []);
+
+  const filtered = clients.map((c) => ({ ...c, carsCount: c.cars?.length ?? 0 })).filter(
     (c) =>
       c.name.toLowerCase().includes(query.trim().toLowerCase()) ||
       c.phone.replace(/\D/g, "").includes(query.replace(/\D/g, "")),
