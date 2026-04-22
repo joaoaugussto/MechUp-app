@@ -1,3 +1,4 @@
+import './env'
 import cors from 'cors'
 import express from 'express'
 import carsRouter from './routes/cars'
@@ -21,6 +22,8 @@ app.use('/api/cars', carsRouter)
 app.use('/api/services', servicesRouter)
 
 const PORT = 3333
-app.listen(PORT, () => {
-  console.log(`✅ Servidor rodando em http://localhost:${PORT}`)
+const host = '0.0.0.0'
+app.listen(PORT, host, () => {
+  // eslint-disable-next-line no-console
+  console.log(`✅ Servidor em http://localhost:${PORT} (rede local: http://<seu-ip>:${PORT})`)
 })

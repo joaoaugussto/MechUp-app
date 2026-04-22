@@ -5,19 +5,7 @@ import { prisma } from "../prisma/client";
 
 const router = Router();
 
-function requireAdminSecret(req: any, res: any): boolean {
-  const provided = req.header("x-admin-secret");
-  const expected = process.env.MASTER_ADMIN_SECRET || (process.env.NODE_ENV !== "production" ? "dev-master" : undefined);
-  if (!expected || provided !== expected) {
-    res.status(401).json({ error: "unauthorized_admin" });
-    return false;
-  }
-  return true;
-}
-
 router.get("/shops", async (req, res) => {
-  if (!requireAdminSecret(req, res)) return;
-
   const shops = await prisma.shop.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -36,8 +24,6 @@ router.get("/shops", async (req, res) => {
 });
 
 router.patch("/shops/:id/active", async (req, res) => {
-  if (!requireAdminSecret(req, res)) return;
-
   const isActive = Boolean(req.body?.isActive);
   const shop = await prisma.shop.update({
     where: { id: req.params.id },
@@ -47,8 +33,6 @@ router.patch("/shops/:id/active", async (req, res) => {
 });
 
 router.post("/shops/:id/reset-password", async (req, res) => {
-  if (!requireAdminSecret(req, res)) return;
-
   const email = String(req.body?.email || "").trim().toLowerCase();
   const newPassword = String(req.body?.newPassword || "");
   if (!email || newPassword.length < 6) {
@@ -66,8 +50,6 @@ router.post("/shops/:id/reset-password", async (req, res) => {
 });
 
 router.post("/shops/:id/users", async (req, res) => {
-  if (!requireAdminSecret(req, res)) return;
-
   const name = String(req.body?.name || "").trim();
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = String(req.body?.password || "");

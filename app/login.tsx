@@ -4,9 +4,9 @@ import { Modal, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { api } from "@/lib/api";
-import { setMasterAdminSecretHandoff } from "@/src/admin/masterAdminHandoff";
 import { useAuth } from "@/src/auth/AuthProvider";
+
+const MASTER_SECRET = process.env.EXPO_PUBLIC_MASTER_SECRET ?? "dev-master";
 
 export default function LoginPage() {
   const theme = useTheme();
@@ -22,38 +22,38 @@ export default function LoginPage() {
   const [masterVisible, setMasterVisible] = useState(false);
   const [masterPassword, setMasterPassword] = useState("");
   const [masterError, setMasterError] = useState(false);
-  const [masterLoading, setMasterLoading] = useState(false);
 
   const onSubmit = async () => {
     setLoading(true);
     try {
-      await login({ email: email.trim(), password });
+      await login({ email: email.trim(), password: password.trim() });
       router.replace("/");
-    } catch {
-      setSnack("E-mail ou senha incorretos.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/Network request failed|Failed to fetch|NetworkError/i.test(msg)) {
+        setSnack("Sem conexão com a API. Suba o servidor (npm run server) e defina EXPO_PUBLIC_API_URL se estiver no celular.");
+      } else if (/Falha na API \(403\)/.test(msg)) {
+        setSnack("Oficina inativa. Peça para reativar no painel master.");
+      } else {
+        setSnack("E-mail ou senha incorretos.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const onMasterSubmit = async () => {
+  const onMasterSubmit = () => {
     const secret = masterPassword.trim();
     if (!secret) {
       setMasterError(true);
       return;
     }
-    setMasterLoading(true);
-    setMasterError(false);
-    try {
-      await api.adminListShops(secret);
-      setMasterAdminSecretHandoff(secret);
+    if (secret === MASTER_SECRET) {
       setMasterVisible(false);
       setMasterPassword("");
       router.push("/admin");
-    } catch {
+    } else {
       setMasterError(true);
-    } finally {
-      setMasterLoading(false);
     }
   };
 
@@ -111,7 +111,7 @@ export default function LoginPage() {
             <Card.Content style={styles.form}>
               <Text variant="titleMedium">Painel master</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                Use a mesma senha configurada em MASTER_ADMIN_SECRET no servidor.
+                Use a senha configurada em EXPO_PUBLIC_MASTER_SECRET.
               </Text>
               <TextInput
                 mode="outlined"
@@ -124,8 +124,8 @@ export default function LoginPage() {
                 secureTextEntry
                 error={masterError}
               />
-              {masterError && <Text style={{ color: theme.colors.error }}>Senha incorreta ou API indisponível.</Text>}
-              <Button mode="contained" onPress={onMasterSubmit} loading={masterLoading} disabled={masterLoading}>
+              {masterError && <Text style={{ color: theme.colors.error }}>Senha incorreta.</Text>}
+              <Button mode="contained" onPress={onMasterSubmit}>
                 Entrar
               </Button>
               <Button

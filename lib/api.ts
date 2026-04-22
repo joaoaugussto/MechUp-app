@@ -76,10 +76,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const formatBRL = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-async function adminRequest<T>(path: string, adminSecret: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
-  headers.set("x-admin-secret", adminSecret);
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, init);
   if (!res.ok) throw new Error(`Falha admin API (${res.status}) em ${path}`);
   return (await res.json()) as T;
 }
@@ -128,7 +126,7 @@ export const api = {
       },
     ),
   authMe: () => request<{ user: { id: string; name: string; email: string; shopId: string }; shop: { id: string; name: string } }>("/auth/me"),
-  adminListShops: (adminSecret: string) =>
+  adminListShops: () =>
     adminRequest<
       Array<{
         id: string;
@@ -138,21 +136,21 @@ export const api = {
         createdAt: string;
         _count: { users: number; clients: number; cars: number; services: number };
       }>
-    >("/admin/shops", adminSecret),
-  adminSetShopActive: (adminSecret: string, shopId: string, isActive: boolean) =>
-    adminRequest<{ id: string; isActive: boolean }>(`/admin/shops/${shopId}/active`, adminSecret, {
+    >("/admin/shops"),
+  adminSetShopActive: (shopId: string, isActive: boolean) =>
+    adminRequest<{ id: string; isActive: boolean }>(`/admin/shops/${shopId}/active`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive }),
     }),
-  adminResetPassword: (adminSecret: string, shopId: string, email: string, newPassword: string) =>
-    adminRequest<{ success: boolean; updated: number }>(`/admin/shops/${shopId}/reset-password`, adminSecret, {
+  adminResetPassword: (shopId: string, email: string, newPassword: string) =>
+    adminRequest<{ success: boolean; updated: number }>(`/admin/shops/${shopId}/reset-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, newPassword }),
     }),
-  adminCreateUser: (adminSecret: string, shopId: string, data: { name: string; email: string; password: string }) =>
-    adminRequest<{ id: string; shopId: string; name: string; email: string }>(`/admin/shops/${shopId}/users`, adminSecret, {
+  adminCreateUser: (shopId: string, data: { name: string; email: string; password: string }) =>
+    adminRequest<{ id: string; shopId: string; name: string; email: string }>(`/admin/shops/${shopId}/users`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
