@@ -16,6 +16,8 @@ const serviceConfig: Record<ServiceStatus, { label: string; tone: "muted" | "war
   a_fazer: { label: "A fazer", tone: "muted" },
   em_andamento: { label: "Em andamento", tone: "warning" },
   concluido: { label: "Concluído", tone: "success" },
+  aguardando_peca: { label: "Aguardando peça", tone: "warning" },
+  cancelado: { label: "Cancelado", tone: "muted" },
 };
 
 function toneColors(theme: MD3Theme, tone: "success" | "gold" | "primary" | "muted" | "warning") {

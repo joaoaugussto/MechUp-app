@@ -26,7 +26,7 @@ export function setAuthToken(token: string | null) {
 }
 
 export type PaymentStatus = "pago" | "pendente" | "adiantado";
-export type ServiceStatus = "a_fazer" | "em_andamento" | "concluido";
+export type ServiceStatus = "a_fazer" | "em_andamento" | "concluido" | "aguardando_peca" | "cancelado";
 
 export interface Client {
   id: string;

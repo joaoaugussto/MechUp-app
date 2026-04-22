@@ -85,6 +85,8 @@ enum ServiceStatus {
   a_fazer
   em_andamento
   concluido
+  aguardando_peca
+  cancelado
 }
 
 enum PaymentStatus {

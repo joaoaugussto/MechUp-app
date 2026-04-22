@@ -15,6 +15,8 @@ const statusLabels: Record<ServiceStatus, string> = {
   a_fazer: "A fazer",
   em_andamento: "Em andamento",
   concluido: "Concluído",
+  aguardando_peca: "Aguardando peça",
+  cancelado: "Cancelado",
 };
 
 const paymentLabels: Record<PaymentStatus, string> = {
@@ -51,7 +53,7 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
   const [description, setDescription] = useState("");
   const [carId, setCarId] = useState("");
   const [price, setPrice] = useState("");
-  const [status, setStatus] = useState<ServiceStatus>("a_fazer");
+  const [status, setStatus] = useState<ServiceStatus>("em_andamento");
   const [payment, setPayment] = useState<PaymentStatus>("pendente");
   const [entryDate, setEntryDate] = useState(formatDateBR(new Date().toISOString()));
   const [dueDate, setDueDate] = useState("");

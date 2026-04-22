@@ -13,11 +13,15 @@ const filterLabel: Record<Filter, string> = {
   a_fazer: "A Fazer",
   em_andamento: "Em Andamento",
   concluido: "Concluído",
+  aguardando_peca: "Aguardando peça",
+  cancelado: "Cancelado",
 };
 const statusLabel: Record<ServiceStatus, string> = {
   a_fazer: "A Fazer",
   em_andamento: "Em Andamento",
   concluido: "Concluído",
+  aguardando_peca: "Aguardando peça",
+  cancelado: "Cancelado",
 };
 
 export default function ServicesPage() {
@@ -100,21 +104,28 @@ export default function ServicesPage() {
       contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}
       keyboardShouldPersistTaps="handled"
     >
-      <Button mode="contained" icon="plus" onPress={() => router.push("/servico/novo")} style={styles.newButton}>
-        Nova Ordem
-      </Button>
-
-      <View>
-        <Text variant="headlineSmall">Ordens de Serviço</Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-          {services.length} ordens registradas
-        </Text>
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text variant="headlineSmall">Ordens de Serviço</Text>
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            {services.length} ordens registradas
+          </Text>
+        </View>
+        <Button
+          mode="contained"
+          compact
+          icon="plus"
+          onPress={() => router.push("/servico/novo")}
+          style={styles.newButtonSmall}
+        >
+          Nova Ordem
+        </Button>
       </View>
 
       <View style={styles.filtersRow}>
         <TextInput
           mode="outlined"
-          placeholder="Buscar por placa ou cliente..."
+          placeholder="Buscar placa/cliente/serviço..."
           value={query}
           onChangeText={setQuery}
           style={[styles.searchInput, compactCard && styles.searchInputCompact]}
@@ -131,7 +142,9 @@ export default function ServicesPage() {
           <Menu.Item onPress={() => { setFilter("todos"); setFilterMenuOpen(false); }} title={filterLabel.todos} />
           <Menu.Item onPress={() => { setFilter("a_fazer"); setFilterMenuOpen(false); }} title={filterLabel.a_fazer} />
           <Menu.Item onPress={() => { setFilter("em_andamento"); setFilterMenuOpen(false); }} title={filterLabel.em_andamento} />
+          <Menu.Item onPress={() => { setFilter("aguardando_peca"); setFilterMenuOpen(false); }} title={filterLabel.aguardando_peca} />
           <Menu.Item onPress={() => { setFilter("concluido"); setFilterMenuOpen(false); }} title={filterLabel.concluido} />
+          <Menu.Item onPress={() => { setFilter("cancelado"); setFilterMenuOpen(false); }} title={filterLabel.cancelado} />
         </Menu>
       </View>
 
@@ -140,9 +153,33 @@ export default function ServicesPage() {
           <Card key={s.id} mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
             <Card.Content style={[styles.cardContent, compactCard && styles.cardContentCompact]}>
               <View style={styles.leftCol}>
-                <Text variant="titleSmall">
-                  {(s.car?.model ?? "Sem carro")} - {s.car?.plate ?? "-"}
-                </Text>
+                <View style={styles.titleRow}>
+                    <Text variant="titleSmall" style={{ flex: 1 }}>
+                    {(s.car?.model ?? "Sem carro")} - {s.car?.plate ?? "-"}
+                  </Text>
+                    <Menu
+                      visible={statusMenuFor === s.id}
+                      onDismiss={() => setStatusMenuFor(null)}
+                      anchor={
+                        <Button
+                          mode="outlined"
+                          compact
+                          onPress={() => setStatusMenuFor(s.id)}
+                          loading={updatingStatusId === s.id}
+                          disabled={updatingStatusId === s.id}
+                          style={styles.statusTag}
+                        >
+                          {statusLabel[s.status]}
+                        </Button>
+                      }
+                    >
+                      <Menu.Item onPress={() => void changeStatus(s, "a_fazer")} title={statusLabel.a_fazer} />
+                      <Menu.Item onPress={() => void changeStatus(s, "em_andamento")} title={statusLabel.em_andamento} />
+                      <Menu.Item onPress={() => void changeStatus(s, "aguardando_peca")} title={statusLabel.aguardando_peca} />
+                      <Menu.Item onPress={() => void changeStatus(s, "concluido")} title={statusLabel.concluido} />
+                      <Menu.Item onPress={() => void changeStatus(s, "cancelado")} title={statusLabel.cancelado} />
+                    </Menu>
+                </View>
                 <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                   Cliente: {s.client?.name ?? "-"}
                 </Text>
@@ -152,42 +189,35 @@ export default function ServicesPage() {
               </View>
 
               <View style={[styles.midCol, compactCard && styles.midColCompact]}>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  Entrada: {new Date(s.createdAt).toLocaleDateString("pt-BR")}
-                </Text>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  Previsão: {new Date(s.dueDate).toLocaleDateString("pt-BR")}
-                </Text>
+                <View style={styles.datesRow}>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      Entrada: {new Date(s.createdAt).toLocaleDateString("pt-BR")}
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      Saída: {new Date(s.dueDate).toLocaleDateString("pt-BR")}
+                    </Text>
+                  </View>
+                  <Button mode="outlined" compact onPress={() => router.push(`/servico/${s.id}`)} style={styles.editButton}>
+                    Editar
+                  </Button>
+                </View>
                 <Text variant="titleSmall" style={styles.price}>
                   {formatBRL(s.price)}
                 </Text>
               </View>
 
               <View style={[styles.rightCol, compactCard && styles.rightColCompact]}>
-                <Menu
-                  visible={statusMenuFor === s.id}
-                  onDismiss={() => setStatusMenuFor(null)}
-                  anchor={
-                    <Button
-                      mode="outlined"
-                      onPress={() => setStatusMenuFor(s.id)}
-                      loading={updatingStatusId === s.id}
-                      disabled={updatingStatusId === s.id}
-                      style={styles.statusButton}
-                    >
-                      {statusLabel[s.status]}
-                    </Button>
-                  }
+                <Button
+                  mode="contained"
+                  icon="whatsapp"
+                  buttonColor="#25D366"
+                  textColor="#ffffff"
+                  onPress={() => void sendStatusWhatsApp(s)}
+                  style={styles.whatsButton}
+                  compact
                 >
-                  <Menu.Item onPress={() => void changeStatus(s, "a_fazer")} title={statusLabel.a_fazer} />
-                  <Menu.Item onPress={() => void changeStatus(s, "em_andamento")} title={statusLabel.em_andamento} />
-                  <Menu.Item onPress={() => void changeStatus(s, "concluido")} title={statusLabel.concluido} />
-                </Menu>
-                <Button mode="text" onPress={() => router.push(`/servico/${s.id}`)}>
-                  Editar
-                </Button>
-                <Button mode="text" onPress={() => void sendStatusWhatsApp(s)}>
-                  WhatsApp
+                  Enviar Status
                 </Button>
               </View>
             </Card.Content>
@@ -213,13 +243,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 16,
   },
-  newButton: {
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  newButtonSmall: {
     alignSelf: "flex-start",
   },
   filtersRow: {
     flexDirection: "row",
     gap: 10,
     alignItems: "center",
+    flexWrap: "wrap",
   },
   searchInput: {
     flex: 1,
@@ -227,14 +264,14 @@ const styles = StyleSheet.create({
     maxWidth: 520,
   },
   searchInputCompact: {
-    minWidth: 0,
+    minWidth: "100%",
     maxWidth: 9999,
   },
   filterButton: {
     minWidth: 180,
   },
   filterButtonCompact: {
-    minWidth: 130,
+    minWidth: 180,
   },
   list: {
     gap: 12,
@@ -253,11 +290,32 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexShrink: 1,
   },
+  titleRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    justifyContent: "space-between",
+  },
+  statusTag: {
+    minWidth: 160,
+    alignSelf: "flex-end",
+  },
+  editButton: {
+    minWidth: 160,
+    alignSelf: "flex-end",
+  },
   midCol: {
     flex: 1,
     gap: 4,
     minWidth: 0,
     alignItems: "flex-start",
+  },
+  datesRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   midColCompact: {
     width: "100%",
@@ -277,8 +335,8 @@ const styles = StyleSheet.create({
     borderTopColor: "#2A2A2A",
     paddingTop: 8,
   },
-  statusButton: {
-    minWidth: 145,
+  whatsButton: {
+    alignSelf: "stretch",
   },
   price: {
     color: "#B8860B",

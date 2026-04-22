@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Modal, ScrollView, StyleSheet, View } from "react-native";
-import { Button, Card, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
+import { Button, Card, IconButton, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/src/auth/AuthProvider";
@@ -63,6 +63,7 @@ export default function LoginPage() {
 
   return (
     <>
+      <View style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1, backgroundColor: theme.colors.background }}
         contentContainerStyle={[
@@ -70,6 +71,13 @@ export default function LoginPage() {
           { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
         ]}
       >
+        <IconButton
+          icon="dots-horizontal"
+          size={22}
+          style={[styles.adminDots, { top: insets.top + 8 }]}
+          iconColor={theme.colors.onSurfaceVariant}
+          onPress={() => setAdminAccessVisible(true)}
+        />
         <View style={styles.header}>
           <Text variant="headlineMedium">Entrar</Text>
           <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
@@ -97,17 +105,10 @@ export default function LoginPage() {
             <Button mode="contained" loading={loading} disabled={loading} onPress={onSubmit}>
               Entrar
             </Button>
-
-            <Button
-              mode="text"
-              textColor={theme.colors.surfaceVariant}
-              onPress={() => setAdminAccessVisible(true)}
-            >
-              •••
-            </Button>
           </Card.Content>
         </Card>
       </ScrollView>
+      </View>
 
       <Modal visible={adminAccessVisible} transparent animationType="fade">
         <View style={styles.overlay}>
@@ -161,6 +162,11 @@ const styles = StyleSheet.create({
     maxWidth: 520,
     width: "100%",
     alignSelf: "center",
+  },
+  adminDots: {
+    position: "absolute",
+    right: 4,
+    zIndex: 10,
   },
   header: {
     gap: 8,
