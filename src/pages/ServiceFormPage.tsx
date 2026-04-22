@@ -44,13 +44,17 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
   const [payMenu, setPayMenu] = useState(false);
   const [snack, setSnack] = useState(false);
   const [snackMsg, setSnackMsg] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.getCars().then((data) => {
-      setCars(data);
-      if (!serviceId && data[0]) setCarId(data[0].id);
-    });
-    api.getServices().then(setServices);
+    api
+      .getCars()
+      .then((data) => {
+        setCars(data);
+        if (!serviceId && data[0]) setCarId(data[0].id);
+      })
+      .catch(() => setCars([]));
+    api.getServices().then(setServices).catch(() => setServices([]));
   }, [serviceId]);
 
   useEffect(() => {
@@ -72,6 +76,36 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
   }, [carId, cars]);
 
   const submit = async () => {
+    if (saving) return;
+    if (!cars.length) {
+      setSnackMsg("Nenhum carro cadastrado. Por favor, cadastre um carro primeiro.");
+      setSnack(true);
+      return;
+    }
+    if (!title.trim()) {
+      setSnackMsg("Informe o nome do serviço.");
+      setSnack(true);
+      return;
+    }
+    if (!dueDate.trim()) {
+      setSnackMsg("Informe a previsão no formato AAAA-MM-DD.");
+      setSnack(true);
+      return;
+    }
+    const dueDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dueDateRegex.test(dueDate.trim())) {
+      setSnackMsg("Data inválida. Use o formato AAAA-MM-DD.");
+      setSnack(true);
+      return;
+    }
+    const parsedPrice = Number(String(price).replace(",", "."));
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      setSnackMsg("Informe um valor válido.");
+      setSnack(true);
+      return;
+    }
+    const dueDateIso = new Date(`${dueDate.trim()}T00:00:00`).toISOString();
+    setSaving(true);
     try {
       const selectedCar = cars.find((car) => car.id === carId);
       if (!selectedCar) {
@@ -80,14 +114,14 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
         return;
       }
       const payload = {
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         carId,
         clientId: selectedCar.clientId,
         status,
         payment,
-        price: Number(price),
-        dueDate,
+        price: parsedPrice,
+        dueDate: dueDateIso,
       };
       if (editing && serviceId) {
         await api.updateService(serviceId, payload);
@@ -95,10 +129,20 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
       } else {
         await api.createService(payload);
         setSnackMsg("Serviço cadastrado com sucesso.");
+        router.replace("/services");
+        return;
       }
-    } catch {
-      setSnackMsg("Erro ao salvar serviço. Verifique a API e tente novamente.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/\[invalid_car\]/.test(msg)) {
+        setSnackMsg("Carro inválido. Cadastre ou selecione outro carro.");
+      } else if (/\[invalid_client\]/.test(msg)) {
+        setSnackMsg("Cliente inválido para o carro selecionado.");
+      } else {
+        setSnackMsg("Erro ao salvar serviço. Verifique a API e tente novamente.");
+      }
     } finally {
+      setSaving(false);
       setSnack(true);
     }
   };
@@ -125,18 +169,27 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
             <TextInput mode="outlined" label="Descrição" placeholder="Detalhes, peças, observações..." value={description} onChangeText={setDescription} multiline numberOfLines={4} />
 
             <Text variant="labelLarge">Carro</Text>
-            <Menu visible={carMenu} onDismiss={() => setCarMenu(false)} anchor={<Button mode="outlined" onPress={() => setCarMenu(true)}>{carLabel}</Button>}>
-              {cars.map((c) => (
-                <Menu.Item
-                  key={c.id}
-                  onPress={() => {
-                    setCarId(c.id);
-                    setCarMenu(false);
-                  }}
-                  title={`${c.model} — ${c.plate}`}
-                />
-              ))}
-            </Menu>
+            {cars.length === 0 ? (
+              <View style={styles.warningBox}>
+                <Text variant="bodyMedium">Por favor, cadastre um carro antes de criar uma OS.</Text>
+                <Button mode="outlined" onPress={() => router.push("/carro/novo")}>
+                  Cadastrar carro
+                </Button>
+              </View>
+            ) : (
+              <Menu visible={carMenu} onDismiss={() => setCarMenu(false)} anchor={<Button mode="outlined" onPress={() => setCarMenu(true)}>{carLabel}</Button>}>
+                {cars.map((c) => (
+                  <Menu.Item
+                    key={c.id}
+                    onPress={() => {
+                      setCarId(c.id);
+                      setCarMenu(false);
+                    }}
+                    title={`${c.model} — ${c.plate}`}
+                  />
+                ))}
+              </Menu>
+            )}
 
             <TextInput mode="outlined" label="Valor (R$)" placeholder="0" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
 
@@ -157,7 +210,7 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
             <TextInput mode="outlined" label="Previsão (AAAA-MM-DD)" placeholder="2026-04-22" value={dueDate} onChangeText={setDueDate} />
 
             <View style={styles.actions}>
-              <Button mode="contained" icon="content-save" onPress={submit}>
+              <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving || cars.length === 0}>
                 {editing ? "Salvar alterações" : "Cadastrar OS"}
               </Button>
               {editing ? (
@@ -203,5 +256,8 @@ const styles = StyleSheet.create({
   actions: {
     gap: 8,
     marginTop: 8,
+  },
+  warningBox: {
+    gap: 8,
   },
 });

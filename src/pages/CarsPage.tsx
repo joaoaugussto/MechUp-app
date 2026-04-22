@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Chip, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,9 +15,20 @@ export default function CarsPage() {
   const insets = useSafeAreaInsets();
   const [cars, setCars] = useState<Car[]>([]);
 
-  useEffect(() => {
-    api.getCars().then(setCars).catch(() => setCars([]));
+  const loadCars = useCallback(async () => {
+    try {
+      const data = await api.getCars();
+      setCars(data);
+    } catch {
+      setCars([]);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadCars();
+    }, [loadCars]),
+  );
 
   return (
     <ScrollView

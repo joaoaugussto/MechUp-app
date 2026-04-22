@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/src/auth/AuthProvider";
 
-const MASTER_SECRET = process.env.EXPO_PUBLIC_MASTER_SECRET ?? "dev-master";
+const ADMIN_ACCESS_SECRET = process.env.EXPO_PUBLIC_MASTER_SECRET ?? "dev-master";
 
 export default function LoginPage() {
   const theme = useTheme();
@@ -19,23 +19,27 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [snack, setSnack] = useState("");
 
-  const [masterVisible, setMasterVisible] = useState(false);
-  const [masterPassword, setMasterPassword] = useState("");
-  const [masterError, setMasterError] = useState(false);
+  const [adminAccessVisible, setAdminAccessVisible] = useState(false);
+  const [adminAccessPassword, setAdminAccessPassword] = useState("");
+  const [adminAccessError, setAdminAccessError] = useState(false);
 
   const onSubmit = async () => {
     setLoading(true);
     try {
-      await login({ email: email.trim(), password: password.trim() });
+      await login({ email: email.trim(), password });
       router.replace("/");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (/Network request failed|Failed to fetch|NetworkError/i.test(msg)) {
         setSnack("Sem conexão com a API. Suba o servidor (npm run server) e defina EXPO_PUBLIC_API_URL se estiver no celular.");
-      } else if (/Falha na API \(403\)/.test(msg)) {
-        setSnack("Oficina inativa. Peça para reativar no painel master.");
-      } else {
+      } else if (/\[invalid_credentials\]/.test(msg) || /Falha na API \(401\)/.test(msg)) {
         setSnack("E-mail ou senha incorretos.");
+      } else if (/\[shop_inactive\]/.test(msg) || /Falha na API \(403\)/.test(msg)) {
+        setSnack("Oficina inativa. Peça para reativar no painel administrativo.");
+      } else if (/Falha na API \((4|5)\d{2}\)/.test(msg)) {
+        setSnack("Erro da API no login. Verifique se o servidor está atualizado e rodando.");
+      } else {
+        setSnack("Falha inesperada ao entrar.");
       }
     } finally {
       setLoading(false);
@@ -43,17 +47,17 @@ export default function LoginPage() {
   };
 
   const onMasterSubmit = () => {
-    const secret = masterPassword.trim();
+    const secret = adminAccessPassword.trim();
     if (!secret) {
-      setMasterError(true);
+      setAdminAccessError(true);
       return;
     }
-    if (secret === MASTER_SECRET) {
-      setMasterVisible(false);
-      setMasterPassword("");
+    if (secret === ADMIN_ACCESS_SECRET) {
+      setAdminAccessVisible(false);
+      setAdminAccessPassword("");
       router.push("/admin");
     } else {
-      setMasterError(true);
+      setAdminAccessError(true);
     }
   };
 
@@ -97,7 +101,7 @@ export default function LoginPage() {
             <Button
               mode="text"
               textColor={theme.colors.surfaceVariant}
-              onPress={() => setMasterVisible(true)}
+              onPress={() => setAdminAccessVisible(true)}
             >
               •••
             </Button>
@@ -105,35 +109,35 @@ export default function LoginPage() {
         </Card>
       </ScrollView>
 
-      <Modal visible={masterVisible} transparent animationType="fade">
+      <Modal visible={adminAccessVisible} transparent animationType="fade">
         <View style={styles.overlay}>
           <Card style={styles.modalCard}>
             <Card.Content style={styles.form}>
-              <Text variant="titleMedium">Painel master</Text>
+              <Text variant="titleMedium">Painel administrativo</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                 Use a senha configurada em EXPO_PUBLIC_MASTER_SECRET.
               </Text>
               <TextInput
                 mode="outlined"
-                label="Senha master"
-                value={masterPassword}
+                label="Senha de acesso"
+                value={adminAccessPassword}
                 onChangeText={(v) => {
-                  setMasterPassword(v);
-                  setMasterError(false);
+                  setAdminAccessPassword(v);
+                  setAdminAccessError(false);
                 }}
                 secureTextEntry
-                error={masterError}
+                error={adminAccessError}
               />
-              {masterError && <Text style={{ color: theme.colors.error }}>Senha incorreta.</Text>}
+              {adminAccessError && <Text style={{ color: theme.colors.error }}>Senha incorreta.</Text>}
               <Button mode="contained" onPress={onMasterSubmit}>
                 Entrar
               </Button>
               <Button
                 mode="text"
                 onPress={() => {
-                  setMasterVisible(false);
-                  setMasterPassword("");
-                  setMasterError(false);
+                  setAdminAccessVisible(false);
+                  setAdminAccessPassword("");
+                  setAdminAccessError(false);
                 }}
               >
                 Cancelar

@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, IconButton, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,9 +16,20 @@ export default function ClientsPage() {
   const [query, setQuery] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
 
-  useEffect(() => {
-    api.getClients().then(setClients).catch(() => setClients([]));
+  const loadClients = useCallback(async () => {
+    try {
+      const data = await api.getClients();
+      setClients(data);
+    } catch {
+      setClients([]);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadClients();
+    }, [loadClients]),
+  );
 
   const filtered = clients.map((c) => ({ ...c, carsCount: c.cars?.length ?? 0 })).filter(
     (c) =>

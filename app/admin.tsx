@@ -50,7 +50,7 @@ export default function AdminPage() {
         style={{ flex: 1, backgroundColor: theme.colors.background }}
         contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
       >
-        <Text variant="headlineSmall">Painel master</Text>
+        <Text variant="headlineSmall">Painel administrativo</Text>
         <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
           Gerencie oficinas e usuários.
         </Text>

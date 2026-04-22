@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, IconButton, SegmentedButtons, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,9 +20,20 @@ export default function ServicesPage() {
   const [filter, setFilter] = useState<Filter>("a_fazer");
   const [services, setServices] = useState<Service[]>([]);
 
-  useEffect(() => {
-    api.getServices().then(setServices).catch(() => setServices([]));
+  const loadServices = useCallback(async () => {
+    try {
+      const data = await api.getServices();
+      setServices(data);
+    } catch {
+      setServices([]);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadServices();
+    }, [loadServices]),
+  );
 
   const list = filter === "todos" ? services : services.filter((s) => s.status === filter);
 

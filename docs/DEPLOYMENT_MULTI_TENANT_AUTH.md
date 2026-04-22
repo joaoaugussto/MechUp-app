@@ -23,14 +23,12 @@ No servidor (produção), defina:
 
 - `DATABASE_URL`: conexão do Postgres
 - `SETUP_SECRET`: segredo para provisionar oficinas/usuários iniciais
-- `MASTER_ADMIN_SECRET`: segredo do painel master
 - `JWT_SECRET`: segredo para assinar/verificar JWT
 
 Exemplo (ver `.env.example`):
 
 - `DATABASE_URL="postgresql://..."`
 - `SETUP_SECRET="..."` (**forte**)
-- `MASTER_ADMIN_SECRET="..."` (**forte**)
 - `JWT_SECRET="..."` (**forte**)
 
 ### 3) Migrations do Prisma
@@ -60,7 +58,7 @@ O backend expõe:
 - `POST /api/auth/register` (provisionamento do 1º usuário)
 - `POST /api/auth/login` (login)
 - `GET /api/auth/me` (perfil)
-- `GET /api/admin/shops` (listar oficinas + métricas, admin master)
+- `GET /api/admin/shops` (listar oficinas + métricas)
 - `PATCH /api/admin/shops/:id/active` (ativar/inativar oficina)
 - `POST /api/admin/shops/:id/users` (criar mais usuários na mesma oficina)
 - `POST /api/admin/shops/:id/reset-password` (resetar senha de usuário da oficina)
@@ -118,7 +116,7 @@ Resposta:
 
 - O app abre em `app/login.tsx` quando não há token salvo.
 - A partir do login existe o atalho `Criar nova oficina (admin)` para `app/onboarding.tsx`.
-- A partir do login existe o atalho `Painel master (sócio)` para `app/admin.tsx`.
+- A partir do login existe o atalho `Painel administrativo (sócio)` para `app/admin.tsx`.
 - O onboarding cria `Shop` + primeiro `User` e mostra a `shopApiKey`.
 - O onboarding valida campos (secret, nome, e-mail válido, senha mínima).
 - Após criar oficina, há ações de:
@@ -130,9 +128,9 @@ Resposta:
 - Sem token válido, as telas internas redirecionam para `/login`.
 - Em "Mais" existe ação de logout que remove token seguro e volta ao login.
 
-### Painel master (`app/admin.tsx`)
+### Painel administrativo (`app/admin.tsx`)
 
-- Acessado com `MASTER_ADMIN_SECRET`.
+- Acessado pelo atalho da tela de login usando `EXPO_PUBLIC_MASTER_SECRET`.
 - Permite:
   - listar oficinas
   - copiar `shopApiKey`
@@ -203,7 +201,7 @@ Apaga: services, cars, clients, users, shops.
    - Tela `app/onboarding.tsx` para seu sócio criar oficina sem código.
    - Cria oficina + usuário admin em um fluxo.
    - Copiar/compartilhar credenciais.
-8. **Painel master para operação**
+8. **Painel administrativo para operação**
    - Tela `app/admin.tsx` para suporte administrativo central.
    - Controle de status da oficina, criação de usuários e reset de senha.
 
@@ -216,14 +214,13 @@ Apaga: services, cars, clients, users, shops.
 - **Não existe Gmail/senha fixa hardcoded** para clientes.
 - No modo dev, existem apenas segredos de provisionamento com fallback:
   - `SETUP_SECRET=dev-setup`
-  - `MASTER_ADMIN_SECRET=dev-master`
 - Em produção, você define seus próprios secrets no ambiente.
 
 ### O app já está pronto para publicar?
 
-- **Base está pronta** (multi-tenant + auth + onboarding + painel master).
+- **Base está pronta** (multi-tenant + auth + onboarding + painel administrativo).
 - Antes de publicar, recomendo checklist final:
-  1. Definir secrets fortes em produção (`SETUP_SECRET`, `MASTER_ADMIN_SECRET`, `JWT_SECRET`).
+  1. Definir secrets fortes em produção (`SETUP_SECRET`, `JWT_SECRET`).
   2. Usar HTTPS na API.
   3. Remover/debugar fallbacks de dev no ambiente de produção (já não valem com `NODE_ENV=production`).
   4. Fazer teste E2E em device real (login, criar oficina, criar usuário, CRUD, inativar/ativar).

@@ -56,7 +56,7 @@ function RootNavigator() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="login" options={{ title: "Entrar", headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ title: "Criar oficina" }} />
-            <Stack.Screen name="admin" options={{ title: "Painel master" }} />
+            <Stack.Screen name="admin" options={{ title: "Painel administrativo" }} />
             <Stack.Screen name="financeiro" options={{ title: "Financeiro" }} />
             <Stack.Screen name="configuracoes" options={{ title: "Configurações" }} />
             <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />

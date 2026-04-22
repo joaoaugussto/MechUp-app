@@ -57,6 +57,9 @@ router.post("/shops/:id/users", async (req, res) => {
     return res.status(400).json({ error: "invalid_body" });
   }
 
+  const existing = await prisma.user.findFirst({ where: { email } });
+  if (existing) return res.status(409).json({ error: "email_already_in_use" });
+
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
     data: { shopId: req.params.id, name, email, passwordHash },

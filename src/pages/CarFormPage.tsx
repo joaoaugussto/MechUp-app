@@ -26,6 +26,7 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [snack, setSnack] = useState(false);
   const [snackMsg, setSnackMsg] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     api.getClients().then((data) => {
@@ -50,18 +51,34 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
   const clientLabel = useMemo(() => clients.find((c) => c.id === clientId)?.name ?? "Selecione um cliente", [clientId, clients]);
 
   const submit = async () => {
+    if (saving) return;
+    if (!name.trim() || !model.trim() || !plate.trim() || !year.trim() || !clientId) {
+      setSnackMsg("Preencha todos os campos obrigatórios.");
+      setSnack(true);
+      return;
+    }
+    const parsedYear = Number(year);
+    if (!Number.isFinite(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
+      setSnackMsg("Informe um ano válido.");
+      setSnack(true);
+      return;
+    }
+    setSaving(true);
     try {
-      const payload = { name, model, plate, year: Number(year), clientId };
+      const payload = { name: name.trim(), model: model.trim(), plate: plate.trim().toUpperCase(), year: parsedYear, clientId };
       if (editing && carId) {
         await api.updateCar(carId, payload);
         setSnackMsg("Carro atualizado com sucesso.");
       } else {
         await api.createCar(payload);
         setSnackMsg("Carro cadastrado com sucesso.");
+        router.replace("/cars");
+        return;
       }
     } catch {
       setSnackMsg("Erro ao salvar carro. Verifique a API e tente novamente.");
     } finally {
+      setSaving(false);
       setSnack(true);
     }
   };
@@ -94,7 +111,7 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
             </Menu>
 
             <View style={styles.actions}>
-              <Button mode="contained" icon="content-save" onPress={submit}>
+              <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving}>
                 {editing ? "Salvar alterações" : "Cadastrar carro"}
               </Button>
               {editing ? (

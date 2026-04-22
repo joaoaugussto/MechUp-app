@@ -68,7 +68,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!token && !headers.has("x-api-key")) headers.set("x-api-key", apiKey);
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
   if (!res.ok) {
-    throw new Error(`Falha na API (${res.status}) em ${path}`);
+    let apiError = "";
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (typeof body?.error === "string") apiError = ` [${body.error}]`;
+    } catch {
+      /* ignore parse error */
+    }
+    throw new Error(`Falha na API (${res.status}) em ${path}${apiError}`);
   }
   return (await res.json()) as T;
 }
@@ -78,7 +85,16 @@ export const formatBRL = (value: number) =>
 
 async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, init);
-  if (!res.ok) throw new Error(`Falha admin API (${res.status}) em ${path}`);
+  if (!res.ok) {
+    let apiError = "";
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (typeof body?.error === "string") apiError = ` [${body.error}]`;
+    } catch {
+      /* ignore parse error */
+    }
+    throw new Error(`Falha admin API (${res.status}) em ${path}${apiError}`);
+  }
   return (await res.json()) as T;
 }
 

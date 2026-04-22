@@ -21,6 +21,7 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
   const [phone, setPhone] = useState("");
   const [snack, setSnack] = useState(false);
   const [snackMsg, setSnackMsg] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!clientId) return;
@@ -31,17 +32,27 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
   }, [clientId]);
 
   const submit = async () => {
+    if (saving) return;
+    if (!name.trim() || !phone.trim()) {
+      setSnackMsg("Preencha nome e telefone.");
+      setSnack(true);
+      return;
+    }
+    setSaving(true);
     try {
       if (editing && clientId) {
-        await api.updateClient(clientId, { name, phone });
+        await api.updateClient(clientId, { name: name.trim(), phone: phone.trim() });
         setSnackMsg("Cliente atualizado com sucesso.");
       } else {
-        await api.createClient({ name, phone });
+        await api.createClient({ name: name.trim(), phone: phone.trim() });
         setSnackMsg("Cliente cadastrado com sucesso.");
+        router.replace("/clients");
+        return;
       }
     } catch {
       setSnackMsg(`Erro ao salvar cliente. Verifique a API e tente novamente.`);
     } finally {
+      setSaving(false);
       setSnack(true);
     }
   };
@@ -67,7 +78,7 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
             <TextInput mode="outlined" label="Nome completo" placeholder="Ex: João Pereira" value={name} onChangeText={setName} />
             <TextInput mode="outlined" label="Telefone" placeholder="(11) 99999-9999" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             <View style={styles.actions}>
-              <Button mode="contained" icon="content-save" onPress={submit}>
+              <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving}>
                 {editing ? "Salvar alterações" : "Cadastrar cliente"}
               </Button>
               {editing ? (

@@ -25,9 +25,13 @@ router.post("/register", async (req, res) => {
   const shop = await prisma.shop.findUnique({ where: { apiKey: shopApiKey } });
   if (!shop) return res.status(400).json({ error: "invalid_shop" });
 
+  const emailNorm = email.trim().toLowerCase();
+  const existing = await prisma.user.findFirst({ where: { email: emailNorm } });
+  if (existing) return res.status(409).json({ error: "email_already_in_use" });
+
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
-    data: { shopId: shop.id, name: name.trim(), email: email.trim().toLowerCase(), passwordHash },
+    data: { shopId: shop.id, name: name.trim(), email: emailNorm, passwordHash },
   });
 
   return res.status(201).json({ id: user.id, shopId: user.shopId, email: user.email, name: user.name });
@@ -49,22 +53,27 @@ router.post("/login", async (req, res) => {
     return res.status(401).json({ error: "invalid_credentials" });
   }
 
-  let user: (typeof candidates)[0] | null = null;
+  let matchedActiveUser: (typeof candidates)[0] | null = null;
+  let matchedInactiveUser: (typeof candidates)[0] | null = null;
   for (const row of candidates) {
     const ok = await bcrypt.compare(password, row.passwordHash);
     if (ok) {
-      user = row;
-      break;
+      if (row.shop.isActive) {
+        matchedActiveUser = row;
+        break;
+      }
+      if (!matchedInactiveUser) matchedInactiveUser = row;
     }
   }
 
-  if (!user) {
+  if (!matchedActiveUser && !matchedInactiveUser) {
     return res.status(401).json({ error: "invalid_credentials" });
   }
 
-  if (!user.shop.isActive) {
+  if (!matchedActiveUser) {
     return res.status(403).json({ error: "shop_inactive" });
   }
+  const user = matchedActiveUser;
 
   const token = signToken({ sub: user.id, shopId: user.shopId, email: user.email });
   return res.json({
