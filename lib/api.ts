@@ -115,7 +115,11 @@ export const api = {
       }),
     }),
   authLogin: (data: { email: string; password: string }) =>
-    request<{ token: string; user: { id: string; name: string; email: string; shopId: string }; shop: { id: string; name: string } }>(
+    request<{
+      token: string;
+      user: { id: string; name: string; email: string; shopId: string };
+      shop: { id: string; name: string };
+    }>(
       "/auth/login",
       {
         method: "POST",

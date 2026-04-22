@@ -4,9 +4,9 @@ import { Modal, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { api } from "@/lib/api";
+import { setMasterAdminSecretHandoff } from "@/src/admin/masterAdminHandoff";
 import { useAuth } from "@/src/auth/AuthProvider";
-
-const MASTER_SECRET = process.env.EXPO_PUBLIC_MASTER_SECRET ?? "dev-master";
 
 export default function LoginPage() {
   const theme = useTheme();
@@ -19,15 +19,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [snack, setSnack] = useState("");
 
-  // Modal master
   const [masterVisible, setMasterVisible] = useState(false);
   const [masterPassword, setMasterPassword] = useState("");
   const [masterError, setMasterError] = useState(false);
+  const [masterLoading, setMasterLoading] = useState(false);
 
   const onSubmit = async () => {
     setLoading(true);
     try {
-      await login({ email, password });
+      await login({ email: email.trim(), password });
       router.replace("/");
     } catch {
       setSnack("E-mail ou senha incorretos.");
@@ -36,14 +36,24 @@ export default function LoginPage() {
     }
   };
 
-  const onMasterSubmit = () => {
-    if (masterPassword === MASTER_SECRET) {
+  const onMasterSubmit = async () => {
+    const secret = masterPassword.trim();
+    if (!secret) {
+      setMasterError(true);
+      return;
+    }
+    setMasterLoading(true);
+    setMasterError(false);
+    try {
+      await api.adminListShops(secret);
+      setMasterAdminSecretHandoff(secret);
       setMasterVisible(false);
       setMasterPassword("");
-      setMasterError(false);
       router.push("/admin");
-    } else {
+    } catch {
       setMasterError(true);
+    } finally {
+      setMasterLoading(false);
     }
   };
 
@@ -84,7 +94,6 @@ export default function LoginPage() {
               Entrar
             </Button>
 
-            {/* Botão discreto — acesso restrito */}
             <Button
               mode="text"
               textColor={theme.colors.surfaceVariant}
@@ -96,27 +105,37 @@ export default function LoginPage() {
         </Card>
       </ScrollView>
 
-      {/* Modal senha master */}
       <Modal visible={masterVisible} transparent animationType="fade">
         <View style={styles.overlay}>
           <Card style={styles.modalCard}>
             <Card.Content style={styles.form}>
-              <Text variant="titleMedium">Acesso restrito</Text>
+              <Text variant="titleMedium">Painel master</Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                Use a mesma senha configurada em MASTER_ADMIN_SECRET no servidor.
+              </Text>
               <TextInput
                 mode="outlined"
                 label="Senha master"
                 value={masterPassword}
-                onChangeText={(v) => { setMasterPassword(v); setMasterError(false); }}
+                onChangeText={(v) => {
+                  setMasterPassword(v);
+                  setMasterError(false);
+                }}
                 secureTextEntry
                 error={masterError}
               />
-              {masterError && (
-                <Text style={{ color: theme.colors.error }}>Senha incorreta.</Text>
-              )}
-              <Button mode="contained" onPress={onMasterSubmit}>
+              {masterError && <Text style={{ color: theme.colors.error }}>Senha incorreta ou API indisponível.</Text>}
+              <Button mode="contained" onPress={onMasterSubmit} loading={masterLoading} disabled={masterLoading}>
                 Entrar
               </Button>
-              <Button mode="text" onPress={() => { setMasterVisible(false); setMasterPassword(""); setMasterError(false); }}>
+              <Button
+                mode="text"
+                onPress={() => {
+                  setMasterVisible(false);
+                  setMasterPassword("");
+                  setMasterError(false);
+                }}
+              >
                 Cancelar
               </Button>
             </Card.Content>

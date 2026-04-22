@@ -1,9 +1,45 @@
 import * as SecureStore from "expo-secure-store";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { Platform } from "react-native";
 
 import { api, setAuthToken } from "@/lib/api";
 
 const TOKEN_KEY = "auth_token";
+
+async function readToken(): Promise<string | null> {
+  if (Platform.OS === "web") {
+    try {
+      return localStorage.getItem(TOKEN_KEY);
+    } catch {
+      return null;
+    }
+  }
+  return SecureStore.getItemAsync(TOKEN_KEY);
+}
+
+async function writeToken(token: string): Promise<void> {
+  if (Platform.OS === "web") {
+    localStorage.setItem(TOKEN_KEY, token);
+    return;
+  }
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+}
+
+async function clearStoredToken(): Promise<void> {
+  if (Platform.OS === "web") {
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  try {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 type AuthUser = { id: string; name: string; email: string; shopId: string };
 type AuthShop = { id: string; name: string };
@@ -28,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const saved = await SecureStore.getItemAsync(TOKEN_KEY);
+        const saved = await readToken();
         if (!saved) return;
         setAuthToken(saved);
         const me = await api.authMe();
@@ -37,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setShop(me.shop);
       } catch {
         setAuthToken(null);
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await clearStoredToken();
       } finally {
         setLoading(false);
       }
@@ -53,14 +89,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login: async ({ email, password }) => {
         const data = await api.authLogin({ email, password });
         setAuthToken(data.token);
-        await SecureStore.setItemAsync(TOKEN_KEY, data.token);
+        await writeToken(data.token);
         setToken(data.token);
         setUser(data.user);
         setShop(data.shop);
       },
       logout: async () => {
         setAuthToken(null);
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await clearStoredToken();
         setToken(null);
         setUser(null);
         setShop(null);

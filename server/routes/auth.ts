@@ -39,10 +39,24 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "invalid_body" });
   }
 
-  const user = await prisma.user.findFirst({
-    where: { email: email.trim().toLowerCase() },
-    include: { shop: true }, // ← traz o shop junto
+  const emailNorm = email.trim().toLowerCase();
+  const candidates = await prisma.user.findMany({
+    where: { email: emailNorm },
+    include: { shop: true },
   });
+
+  if (!candidates.length) {
+    return res.status(401).json({ error: "invalid_credentials" });
+  }
+
+  let user: (typeof candidates)[0] | null = null;
+  for (const row of candidates) {
+    const ok = await bcrypt.compare(password, row.passwordHash);
+    if (ok) {
+      user = row;
+      break;
+    }
+  }
 
   if (!user) {
     return res.status(401).json({ error: "invalid_credentials" });
@@ -52,13 +66,10 @@ router.post("/login", async (req, res) => {
     return res.status(403).json({ error: "shop_inactive" });
   }
 
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) return res.status(401).json({ error: "invalid_credentials" });
-
   const token = signToken({ sub: user.id, shopId: user.shopId, email: user.email });
   return res.json({
     token,
-    user: { id: user.id, name: user.name, email: user.email },
+    user: { id: user.id, name: user.name, email: user.email, shopId: user.shopId },
     shop: { id: user.shop.id, name: user.shop.name },
   });
 });
