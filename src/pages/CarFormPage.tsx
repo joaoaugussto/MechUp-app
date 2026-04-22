@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Menu, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -29,10 +29,7 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.getClients().then((data) => {
-      setClients(data);
-      if (!clientId && data[0]) setClientId(data[0].id);
-    });
+    api.getClients().then(setClients).catch(() => setClients([]));
     api.getCars().then(setCars);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -48,7 +45,7 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
     setClientId(existing.clientId);
   }, [carId, cars]);
 
-  const clientLabel = useMemo(() => clients.find((c) => c.id === clientId)?.name ?? "Selecione um cliente", [clientId, clients]);
+  const clientLabel = useMemo(() => clients.find((c) => c.id === clientId)?.name ?? "Selecionar Cliente", [clientId, clients]);
 
   const submit = async () => {
     if (saving) return;
@@ -85,19 +82,25 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
 
   return (
     <>
-      <ScrollView
+      <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: theme.colors.background }}
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}
-        keyboardShouldPersistTaps="handled"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
-        <Button mode="text" icon="arrow-left" onPress={() => router.back()} style={{ alignSelf: "flex-start" }}>
-          Voltar
-        </Button>
+        <ScrollView
+          style={{ flex: 1, backgroundColor: theme.colors.background }}
+          contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32 }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          <Button mode="text" icon="arrow-left" onPress={() => router.back()} style={{ alignSelf: "flex-start" }}>
+            Voltar
+          </Button>
 
         <PageHeader title={editing ? "Editar carro" : "Novo carro"} description="Vincule um veículo a um cliente existente." />
 
-        <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
-          <Card.Content style={{ gap: 16, paddingTop: 16 }}>
+          <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
+            <Card.Content style={{ gap: 16, paddingTop: 16 }}>
             <TextInput mode="outlined" label="Apelido / nome" placeholder="Ex: Civic do João" value={name} onChangeText={setName} />
             <TextInput mode="outlined" label="Modelo" placeholder="Honda Civic" value={model} onChangeText={setModel} />
             <TextInput mode="outlined" label="Placa" placeholder="ABC-1D23" value={plate} onChangeText={setPlate} autoCapitalize="characters" />
@@ -136,9 +139,10 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
                 </Button>
               ) : null}
             </View>
-          </Card.Content>
-        </Card>
-      </ScrollView>
+            </Card.Content>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2000}>
         {snackMsg}
       </Snackbar>

@@ -54,6 +54,7 @@ export interface Service {
   payment: PaymentStatus;
   price: number;
   dueDate: string;
+  createdAt: string;
   carId: string;
   clientId: string;
   car?: Car;
@@ -153,6 +154,16 @@ export const api = {
         _count: { users: number; clients: number; cars: number; services: number };
       }>
     >("/admin/shops"),
+  adminCreateShop: (name: string) =>
+    adminRequest<{ id: string; name: string; apiKey: string; isActive: boolean; createdAt: string }>("/admin/shops", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }),
+  adminDeleteShop: (shopId: string) =>
+    adminRequest<{ success: boolean }>(`/admin/shops/${shopId}`, {
+      method: "DELETE",
+    }),
   adminSetShopActive: (shopId: string, isActive: boolean) =>
     adminRequest<{ id: string; isActive: boolean }>(`/admin/shops/${shopId}/active`, {
       method: "PATCH",

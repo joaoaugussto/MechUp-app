@@ -1,24 +1,38 @@
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Card, IconButton, SegmentedButtons, Text, useTheme } from "react-native-paper";
+import { Linking, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Button, Card, Menu, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, formatBRL, type Service, type ServiceStatus } from "@/lib/api";
-import { EmptyState } from "@/src/components/shared/EmptyState";
-import { PageHeader } from "@/src/components/shared/PageHeader";
-import { PaymentBadge, ServiceStatusBadge } from "@/src/components/shared/StatusBadges";
 
 type Filter = "todos" | ServiceStatus;
+const filterLabel: Record<Filter, string> = {
+  todos: "Todos os Status",
+  a_fazer: "A Fazer",
+  em_andamento: "Em Andamento",
+  concluido: "Concluído",
+};
+const statusLabel: Record<ServiceStatus, string> = {
+  a_fazer: "A Fazer",
+  em_andamento: "Em Andamento",
+  concluido: "Concluído",
+};
 
 export default function ServicesPage() {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [filter, setFilter] = useState<Filter>("a_fazer");
+  const { width } = useWindowDimensions();
+  const compactCard = width < 860;
+  const [filter, setFilter] = useState<Filter>("todos");
+  const [query, setQuery] = useState("");
   const [services, setServices] = useState<Service[]>([]);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [statusMenuFor, setStatusMenuFor] = useState<string | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [snack, setSnack] = useState("");
 
   const loadServices = useCallback(async () => {
     try {
@@ -35,7 +49,50 @@ export default function ServicesPage() {
     }, [loadServices]),
   );
 
-  const list = filter === "todos" ? services : services.filter((s) => s.status === filter);
+  const normalizedQuery = query.trim().toLowerCase();
+  const list = services.filter((s) => {
+    const matchesStatus = filter === "todos" ? true : s.status === filter;
+    if (!normalizedQuery) return matchesStatus;
+    const haystack = [s.car?.plate ?? "", s.client?.name ?? "", s.title ?? "", s.description ?? ""].join(" ").toLowerCase();
+    return matchesStatus && haystack.includes(normalizedQuery);
+  });
+
+  const changeStatus = async (service: Service, next: ServiceStatus) => {
+    if (updatingStatusId) return;
+    setUpdatingStatusId(service.id);
+    try {
+      await api.updateService(service.id, {
+        title: service.title,
+        description: service.description,
+        status: next,
+        payment: service.payment,
+        price: service.price,
+        dueDate: service.dueDate,
+        carId: service.carId,
+        clientId: service.clientId,
+      });
+      setServices((prev) => prev.map((s) => (s.id === service.id ? { ...s, status: next } : s)));
+    } finally {
+      setUpdatingStatusId(null);
+      setStatusMenuFor(null);
+    }
+  };
+
+  const sendStatusWhatsApp = async (service: Service) => {
+    const message =
+      `Status da OS\n\n` +
+      `Cliente: ${service.client?.name ?? "-"}\n` +
+      `Veículo: ${(service.car?.model ?? "-")} - ${(service.car?.plate ?? "-")}\n` +
+      `Serviço: ${service.title}\n` +
+      `Status: ${statusLabel[service.status]}\n` +
+      `Previsão: ${new Date(service.dueDate).toLocaleDateString("pt-BR")}\n` +
+      `Valor: ${formatBRL(service.price)}`;
+    try {
+      await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
+    } catch {
+      setSnack("Não foi possível abrir o WhatsApp.");
+    }
+  };
 
   return (
     <ScrollView
@@ -43,73 +100,110 @@ export default function ServicesPage() {
       contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}
       keyboardShouldPersistTaps="handled"
     >
-      <PageHeader
-        title="Serviços"
-        description="Ordens de serviço da oficina."
-        action={
-          <Button mode="contained" icon="plus" onPress={() => router.push("/servico/novo")}>
-            Nova OS
-          </Button>
-        }
-      />
+      <Button mode="contained" icon="plus" onPress={() => router.push("/servico/novo")} style={styles.newButton}>
+        Nova Ordem
+      </Button>
 
-      <SegmentedButtons
-        value={filter}
-        onValueChange={(v) => setFilter(v as Filter)}
-        buttons={[
-          { value: "a_fazer", label: "A fazer" },
-          { value: "em_andamento", label: "Andamento" },
-          { value: "concluido", label: "Concluídos" },
-          { value: "todos", label: "Todos" },
-        ]}
-        style={styles.segment}
-      />
+      <View>
+        <Text variant="headlineSmall">Ordens de Serviço</Text>
+        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          {services.length} ordens registradas
+        </Text>
+      </View>
 
-      {list.length === 0 ? (
-        <EmptyState
-          icon={<MaterialCommunityIcons name="wrench" size={28} color={theme.colors.onSurfaceVariant} />}
-          title="Nenhuma OS nesta lista"
-          description="Cadastre uma nova ordem de serviço para começar."
-          action={
-            <Button mode="contained" icon="plus" onPress={() => router.push("/servico/novo")}>
-              Nova OS
+      <View style={styles.filtersRow}>
+        <TextInput
+          mode="outlined"
+          placeholder="Buscar por placa ou cliente..."
+          value={query}
+          onChangeText={setQuery}
+          style={[styles.searchInput, compactCard && styles.searchInputCompact]}
+        />
+        <Menu
+          visible={filterMenuOpen}
+          onDismiss={() => setFilterMenuOpen(false)}
+          anchor={
+            <Button mode="outlined" onPress={() => setFilterMenuOpen(true)} style={[styles.filterButton, compactCard && styles.filterButtonCompact]}>
+              {filterLabel[filter]}
             </Button>
           }
-        />
-      ) : (
-        <View style={{ gap: 12 }}>
-          {list.map((s) => (
-            <Card key={s.id} mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
-              <Card.Content style={styles.serviceCard}>
-                <View style={styles.serviceLeft}>
-                  <View style={[styles.wrenchBox, { backgroundColor: theme.colors.primaryContainer }]}>
-                    <MaterialCommunityIcons name="wrench" size={22} color={theme.colors.onPrimaryContainer} />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text variant="titleSmall" numberOfLines={1}>
-                      {s.title}
-                    </Text>
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
-                      {s.client?.name ?? "-"} · {(s.car && `${s.car.model} — ${s.car.plate}`) || "-"}
-                    </Text>
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
-                      Vence: {new Date(s.dueDate).toLocaleDateString("pt-BR")}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.serviceRight}>
-                  <ServiceStatusBadge status={s.status} />
-                  <PaymentBadge status={s.payment} />
-                  <Text variant="titleSmall" style={{ color: "#B8860B" }}>
-                    {formatBRL(s.price)}
-                  </Text>
-                  <IconButton icon="pencil" mode="outlined" onPress={() => router.push(`/servico/${s.id}`)} />
-                </View>
-              </Card.Content>
-            </Card>
-          ))}
-        </View>
-      )}
+        >
+          <Menu.Item onPress={() => { setFilter("todos"); setFilterMenuOpen(false); }} title={filterLabel.todos} />
+          <Menu.Item onPress={() => { setFilter("a_fazer"); setFilterMenuOpen(false); }} title={filterLabel.a_fazer} />
+          <Menu.Item onPress={() => { setFilter("em_andamento"); setFilterMenuOpen(false); }} title={filterLabel.em_andamento} />
+          <Menu.Item onPress={() => { setFilter("concluido"); setFilterMenuOpen(false); }} title={filterLabel.concluido} />
+        </Menu>
+      </View>
+
+      <View style={styles.list}>
+        {list.map((s) => (
+          <Card key={s.id} mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
+            <Card.Content style={[styles.cardContent, compactCard && styles.cardContentCompact]}>
+              <View style={styles.leftCol}>
+                <Text variant="titleSmall">
+                  {(s.car?.model ?? "Sem carro")} - {s.car?.plate ?? "-"}
+                </Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  Cliente: {s.client?.name ?? "-"}
+                </Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  Serviço: {s.title}
+                </Text>
+              </View>
+
+              <View style={[styles.midCol, compactCard && styles.midColCompact]}>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  Entrada: {new Date(s.createdAt).toLocaleDateString("pt-BR")}
+                </Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  Previsão: {new Date(s.dueDate).toLocaleDateString("pt-BR")}
+                </Text>
+                <Text variant="titleSmall" style={styles.price}>
+                  {formatBRL(s.price)}
+                </Text>
+              </View>
+
+              <View style={[styles.rightCol, compactCard && styles.rightColCompact]}>
+                <Menu
+                  visible={statusMenuFor === s.id}
+                  onDismiss={() => setStatusMenuFor(null)}
+                  anchor={
+                    <Button
+                      mode="outlined"
+                      onPress={() => setStatusMenuFor(s.id)}
+                      loading={updatingStatusId === s.id}
+                      disabled={updatingStatusId === s.id}
+                      style={styles.statusButton}
+                    >
+                      {statusLabel[s.status]}
+                    </Button>
+                  }
+                >
+                  <Menu.Item onPress={() => void changeStatus(s, "a_fazer")} title={statusLabel.a_fazer} />
+                  <Menu.Item onPress={() => void changeStatus(s, "em_andamento")} title={statusLabel.em_andamento} />
+                  <Menu.Item onPress={() => void changeStatus(s, "concluido")} title={statusLabel.concluido} />
+                </Menu>
+                <Button mode="text" onPress={() => router.push(`/servico/${s.id}`)}>
+                  Editar
+                </Button>
+                <Button mode="text" onPress={() => void sendStatusWhatsApp(s)}>
+                  WhatsApp
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+        ))}
+        {list.length === 0 ? (
+          <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
+            <Card.Content>
+              <Text variant="bodyMedium">Nenhuma ordem encontrada para os filtros atuais.</Text>
+            </Card.Content>
+          </Card>
+        ) : null}
+      </View>
+      <Snackbar visible={Boolean(snack)} onDismiss={() => setSnack("")} duration={2600}>
+        {snack}
+      </Snackbar>
     </ScrollView>
   );
 }
@@ -119,28 +213,74 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 16,
   },
-  segment: {
-    marginBottom: 4,
+  newButton: {
+    alignSelf: "flex-start",
   },
-  serviceCard: {
+  filtersRow: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 260,
+    maxWidth: 520,
+  },
+  searchInputCompact: {
+    minWidth: 0,
+    maxWidth: 9999,
+  },
+  filterButton: {
+    minWidth: 180,
+  },
+  filterButtonCompact: {
+    minWidth: 130,
+  },
+  list: {
     gap: 12,
   },
-  serviceLeft: {
+  cardContent: {
     flexDirection: "row",
     gap: 12,
     alignItems: "flex-start",
   },
-  wrenchBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    alignItems: "center",
+  cardContentCompact: {
+    flexDirection: "column",
+  },
+  leftCol: {
+    flex: 2,
+    gap: 4,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  midCol: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+    alignItems: "flex-start",
+  },
+  midColCompact: {
+    width: "100%",
+    borderTopWidth: 1,
+    borderTopColor: "#2A2A2A",
+    paddingTop: 8,
+  },
+  rightCol: {
+    gap: 8,
+    alignItems: "flex-end",
     justifyContent: "center",
   },
-  serviceRight: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 8,
+  rightColCompact: {
+    width: "100%",
+    alignItems: "flex-start",
+    borderTopWidth: 1,
+    borderTopColor: "#2A2A2A",
+    paddingTop: 8,
+  },
+  statusButton: {
+    minWidth: 145,
+  },
+  price: {
+    color: "#B8860B",
   },
 });

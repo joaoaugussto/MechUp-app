@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Snackbar, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -59,22 +59,28 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
 
   return (
     <>
-      <ScrollView
+      <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: theme.colors.background }}
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}
-        keyboardShouldPersistTaps="handled"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
-        <Button mode="text" icon="arrow-left" onPress={() => router.back()} style={{ alignSelf: "flex-start" }}>
-          Voltar
-        </Button>
+        <ScrollView
+          style={{ flex: 1, backgroundColor: theme.colors.background }}
+          contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32 }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          <Button mode="text" icon="arrow-left" onPress={() => router.back()} style={{ alignSelf: "flex-start" }}>
+            Voltar
+          </Button>
 
         <PageHeader
           title={editing ? "Editar cliente" : "Novo cliente"}
           description="Informe os dados de contato do cliente."
         />
 
-        <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
-          <Card.Content style={{ gap: 16, paddingTop: 16 }}>
+          <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
+            <Card.Content style={{ gap: 16, paddingTop: 16 }}>
             <TextInput mode="outlined" label="Nome completo" placeholder="Ex: João Pereira" value={name} onChangeText={setName} />
             <TextInput mode="outlined" label="Telefone" placeholder="(11) 99999-9999" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             <View style={styles.actions}>
@@ -103,9 +109,10 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
                 </Button>
               ) : null}
             </View>
-          </Card.Content>
-        </Card>
-      </ScrollView>
+            </Card.Content>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2000}>
         {snackMsg}
       </Snackbar>

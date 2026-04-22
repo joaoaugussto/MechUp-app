@@ -20,9 +20,12 @@ export default function AdminPage() {
   const insets = useSafeAreaInsets();
   const [shops, setShops] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [createName, setCreateName] = useState("");
-  const [createEmail, setCreateEmail] = useState("");
-  const [createPassword, setCreatePassword] = useState("");
+  const [creatingShop, setCreatingShop] = useState(false);
+  const [newShopName, setNewShopName] = useState("");
+  const [deletingShopId, setDeletingShopId] = useState<string | null>(null);
+  const [createUserName, setCreateUserName] = useState("");
+  const [createUserEmail, setCreateUserEmail] = useState("");
+  const [createUserPassword, setCreateUserPassword] = useState("");
   const [resetEmail, setResetEmail] = useState("");
   const [resetPassword, setResetPassword] = useState("");
   const [snack, setSnack] = useState("");
@@ -55,6 +58,44 @@ export default function AdminPage() {
           Gerencie oficinas e usuários.
         </Text>
         <>
+          <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
+            <Card.Content style={styles.block}>
+              <Text variant="titleSmall">Criar nova oficina</Text>
+              <TextInput
+                mode="outlined"
+                label="Nome da oficina"
+                placeholder="Ex: Shop B Teste"
+                value={newShopName}
+                onChangeText={setNewShopName}
+              />
+              <Button
+                mode="contained"
+                onPress={async () => {
+                  const name = newShopName.trim();
+                  if (!name) {
+                    setSnack("Informe o nome da oficina.");
+                    return;
+                  }
+                  setCreatingShop(true);
+                  try {
+                    const created = await api.adminCreateShop(name);
+                    setSnack(`Oficina ${created.name} criada com sucesso.`);
+                    setNewShopName("");
+                    await loadShops();
+                  } catch {
+                    setSnack("Falha ao criar oficina.");
+                  } finally {
+                    setCreatingShop(false);
+                  }
+                }}
+                loading={creatingShop}
+                disabled={creatingShop}
+              >
+                Criar oficina
+              </Button>
+            </Card.Content>
+          </Card>
+
           <Button mode="outlined" onPress={() => void loadShops()} loading={loading} disabled={loading}>
             Atualizar lista
           </Button>
@@ -91,41 +132,61 @@ export default function AdminPage() {
                 >
                   {shop.isActive ? "Inativar oficina" : "Ativar oficina"}
                 </Button>
+                <Button
+                  mode="outlined"
+                  textColor={theme.colors.error}
+                  loading={deletingShopId === shop.id}
+                  disabled={deletingShopId === shop.id}
+                  onPress={async () => {
+                    setDeletingShopId(shop.id);
+                    try {
+                      await api.adminDeleteShop(shop.id);
+                      setSnack(`Oficina ${shop.name} removida com sucesso.`);
+                      await loadShops();
+                    } catch {
+                      setSnack("Falha ao remover oficina.");
+                    } finally {
+                      setDeletingShopId(null);
+                    }
+                  }}
+                >
+                  Excluir oficina
+                </Button>
 
                   <View style={styles.divider} />
                   <Text variant="titleSmall">Criar usuário da oficina</Text>
-                  <TextInput mode="outlined" label="Nome do usuário" value={createName} onChangeText={setCreateName} />
+                  <TextInput mode="outlined" label="Nome do usuário" value={createUserName} onChangeText={setCreateUserName} />
                   <TextInput
                     mode="outlined"
                     label="E-mail do usuário"
-                    value={createEmail}
-                    onChangeText={setCreateEmail}
+                    value={createUserEmail}
+                    onChangeText={setCreateUserEmail}
                     autoCapitalize="none"
                   />
                   <TextInput
                     mode="outlined"
                     label="Senha inicial"
-                    value={createPassword}
-                    onChangeText={setCreatePassword}
+                    value={createUserPassword}
+                    onChangeText={setCreateUserPassword}
                     secureTextEntry
                   />
                 <Button
                   mode="outlined"
                   onPress={async () => {
-                    if (!createName || !createEmail || createPassword.length < 6) {
+                    if (!createUserName || !createUserEmail || createUserPassword.length < 6) {
                       setSnack("Informe nome, e-mail e senha (mín. 6).");
                       return;
                     }
                     try {
                       await api.adminCreateUser(shop.id, {
-                        name: createName,
-                        email: createEmail,
-                        password: createPassword,
+                        name: createUserName,
+                        email: createUserEmail,
+                        password: createUserPassword,
                       });
                       setSnack("Usuário criado com sucesso.");
-                      setCreateName("");
-                      setCreateEmail("");
-                      setCreatePassword("");
+                      setCreateUserName("");
+                      setCreateUserEmail("");
+                      setCreateUserPassword("");
                       await loadShops();
                     } catch {
                       setSnack("Falha ao criar usuário (email já existe na oficina?).");

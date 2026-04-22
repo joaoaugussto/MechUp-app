@@ -1,9 +1,17 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { Router } from "express";
 
 import { prisma } from "../prisma/client";
 
 const router = Router();
+
+router.post("/shops", async (req, res) => {
+  const name = typeof req.body?.name === "string" && req.body.name.trim() ? req.body.name.trim() : "Nova oficina";
+  const apiKey = crypto.randomBytes(24).toString("hex");
+  const shop = await prisma.shop.create({ data: { name, apiKey } });
+  res.status(201).json({ id: shop.id, name: shop.name, apiKey: shop.apiKey, isActive: shop.isActive, createdAt: shop.createdAt });
+});
 
 router.get("/shops", async (req, res) => {
   const shops = await prisma.shop.findMany({
@@ -30,6 +38,22 @@ router.patch("/shops/:id/active", async (req, res) => {
     data: { isActive },
   });
   res.json({ id: shop.id, isActive: shop.isActive });
+});
+
+router.delete("/shops/:id", async (req, res) => {
+  const shopId = req.params.id;
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.service.deleteMany({ where: { shopId } });
+      await tx.car.deleteMany({ where: { shopId } });
+      await tx.client.deleteMany({ where: { shopId } });
+      await tx.user.deleteMany({ where: { shopId } });
+      await tx.shop.delete({ where: { id: shopId } });
+    });
+    res.json({ success: true });
+  } catch {
+    res.status(404).json({ error: "shop_not_found" });
+  }
 });
 
 router.post("/shops/:id/reset-password", async (req, res) => {
