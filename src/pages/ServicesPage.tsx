@@ -46,6 +46,7 @@ export default function ServicesPage() {
   const [statusMenuFor, setStatusMenuFor] = useState<string | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [snack, setSnack] = useState("");
+  const [whatsConfirm, setWhatsConfirm] = useState<Service | null>(null);
 
   const loadServices = useCallback(async () => {
     try {
@@ -80,6 +81,7 @@ export default function ServicesPage() {
         status: next,
         payment: service.payment,
         price: service.price,
+        advanceAmount: service.advanceAmount,
         dueDate: service.dueDate,
         carId: service.carId,
         clientId: service.clientId,
@@ -92,186 +94,231 @@ export default function ServicesPage() {
   };
 
   const sendStatusWhatsApp = async (service: Service) => {
+    const phone = service.client?.phone?.replace(/\D/g, "") ?? "";
     const message =
       `Status da OS\n\n` +
       `Cliente: ${service.client?.name ?? "-"}\n` +
-      `Veículo: ${(service.car?.model ?? "-")} - ${(service.car?.plate ?? "-")}\n` +
+      `Veículo: ${service.car?.model ?? "-"} - ${service.car?.plate ?? "-"}\n` +
       `Serviço: ${service.title}\n` +
       `Status: ${statusLabel[service.status]}\n` +
       `Previsão: ${new Date(service.dueDate).toLocaleDateString("pt-BR")}\n` +
       `Valor: ${formatBRL(service.price)}`;
     try {
-      await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
+      const url = phone
+        ? `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`
+        : `https://wa.me/?text=${encodeURIComponent(message)}`;
+      await Linking.openURL(url);
     } catch {
       setSnack("Não foi possível abrir o WhatsApp.");
     }
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <Text variant="headlineSmall">Ordens de Serviço</Text>
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-            {services.length} ordens registradas
-          </Text>
+    <>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text variant="headlineSmall">Ordens de Serviço</Text>
+            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+              {services.length} ordens registradas
+            </Text>
+          </View>
+          <Button
+            mode="contained"
+            compact
+            icon="plus"
+            onPress={() => router.push("/servico/novo")}
+            style={styles.newButtonSmall}
+          >
+            Nova Ordem
+          </Button>
         </View>
-        <Button
-          mode="contained"
-          compact
-          icon="plus"
-          onPress={() => router.push("/servico/novo")}
-          style={styles.newButtonSmall}
-        >
-          Nova Ordem
-        </Button>
-      </View>
 
-      <View style={styles.filtersRow}>
-        <TextInput
-          mode="outlined"
-          placeholder="Procurar Serviço"
-          value={query}
-          onChangeText={setQuery}
-          style={styles.searchInput}
-          outlineStyle={{ borderRadius: 24 }}
-          left={<TextInput.Icon icon="magnify" size={18} />}
-          dense
-        />
-        <Menu
-          visible={filterMenuOpen}
-          onDismiss={() => setFilterMenuOpen(false)}
-          anchor={
-            <Button
-              mode="outlined"
-              onPress={() => setFilterMenuOpen(true)}
-              style={[styles.filterButton, { borderColor: filter === "todos" ? theme.colors.outline : statusColor[filter as ServiceStatus] }]}
-              textColor={filter === "todos" ? theme.colors.onSurface : statusColor[filter as ServiceStatus]}
-            >
-              {filterLabel[filter]}
-            </Button>
-          }
-        >
-          <Menu.Item onPress={() => { setFilter("todos"); setFilterMenuOpen(false); }} title={filterLabel.todos} />
-          <Menu.Item onPress={() => { setFilter("a_fazer"); setFilterMenuOpen(false); }} title={filterLabel.a_fazer} />
-          <Menu.Item onPress={() => { setFilter("em_andamento"); setFilterMenuOpen(false); }} title={filterLabel.em_andamento} />
-          <Menu.Item onPress={() => { setFilter("aguardando_peca"); setFilterMenuOpen(false); }} title={filterLabel.aguardando_peca} />
-          <Menu.Item onPress={() => { setFilter("concluido"); setFilterMenuOpen(false); }} title={filterLabel.concluido} />
-          <Menu.Item onPress={() => { setFilter("cancelado"); setFilterMenuOpen(false); }} title={filterLabel.cancelado} />
-        </Menu>
-      </View>
+        <View style={styles.filtersRow}>
+          <TextInput
+            mode="outlined"
+            placeholder="Procurar Serviço"
+            value={query}
+            onChangeText={setQuery}
+            style={styles.searchInput}
+            outlineStyle={{ borderRadius: 24 }}
+            left={<TextInput.Icon icon="magnify" size={18} />}
+            dense
+          />
+          <Menu
+            visible={filterMenuOpen}
+            onDismiss={() => setFilterMenuOpen(false)}
+            anchor={
+              <Button
+                mode="outlined"
+                onPress={() => setFilterMenuOpen(true)}
+                style={[styles.filterButton, { borderColor: filter === "todos" ? theme.colors.outline : statusColor[filter as ServiceStatus] }]}
+                textColor={filter === "todos" ? theme.colors.onSurface : statusColor[filter as ServiceStatus]}
+              >
+                {filterLabel[filter]}
+              </Button>
+            }
+          >
+            <Menu.Item onPress={() => { setFilter("todos"); setFilterMenuOpen(false); }} title={filterLabel.todos} />
+            <Menu.Item onPress={() => { setFilter("a_fazer"); setFilterMenuOpen(false); }} title={filterLabel.a_fazer} />
+            <Menu.Item onPress={() => { setFilter("em_andamento"); setFilterMenuOpen(false); }} title={filterLabel.em_andamento} />
+            <Menu.Item onPress={() => { setFilter("aguardando_peca"); setFilterMenuOpen(false); }} title={filterLabel.aguardando_peca} />
+            <Menu.Item onPress={() => { setFilter("concluido"); setFilterMenuOpen(false); }} title={filterLabel.concluido} />
+            <Menu.Item onPress={() => { setFilter("cancelado"); setFilterMenuOpen(false); }} title={filterLabel.cancelado} />
+          </Menu>
+        </View>
 
-      <View style={styles.list}>
-        {list.map((s) => (
-          <Card key={s.id} mode="outlined" style={{
-            borderColor: theme.colors.outlineVariant,
-            borderLeftColor: statusColor[s.status], borderLeftWidth: 4, overflow: "hidden"
-          }}>
-            <Card.Content style={[styles.cardContent, compactCard && styles.cardContentCompact]}>
-              <View style={styles.leftCol}>
-                <View style={styles.titleRow}>
-                  <Text variant="titleSmall" style={{ flex: 1 }}>
-                    {(s.car?.model ?? "Sem carro")} - {s.car?.plate ?? "-"}
+        <View style={styles.list}>
+          {list.map((s) => (
+            <Card key={s.id} mode="outlined" style={{
+              borderColor: theme.colors.outlineVariant,
+              borderLeftColor: statusColor[s.status], borderLeftWidth: 4, overflow: "hidden"
+            }}>
+              <Card.Content style={[styles.cardContent, compactCard && styles.cardContentCompact]}>
+                <View style={styles.leftCol}>
+                  <View style={styles.titleRow}>
+                    <Text variant="titleSmall" style={{ flex: 1 }}>
+                      {(s.car?.model ?? "Sem carro")} - {s.car?.plate ?? "-"}
+                    </Text>
+                    <Menu
+                      visible={statusMenuFor === s.id}
+                      onDismiss={() => setStatusMenuFor(null)}
+                      anchor={
+                        <Button
+                          mode="outlined"
+                          compact
+                          onPress={() => setStatusMenuFor(s.id)}
+                          loading={updatingStatusId === s.id}
+                          disabled={updatingStatusId === s.id}
+                          style={[styles.statusTag, { borderColor: statusColor[s.status] }]}
+                          textColor={statusColor[s.status]}
+                        >
+                          {statusLabel[s.status]}
+                        </Button>
+                      }
+                    >
+                      <Menu.Item onPress={() => void changeStatus(s, "a_fazer")} title={statusLabel.a_fazer} />
+                      <Menu.Item onPress={() => void changeStatus(s, "em_andamento")} title={statusLabel.em_andamento} />
+                      <Menu.Item onPress={() => void changeStatus(s, "aguardando_peca")} title={statusLabel.aguardando_peca} />
+                      <Menu.Item onPress={() => void changeStatus(s, "concluido")} title={statusLabel.concluido} />
+                      <Menu.Item onPress={() => void changeStatus(s, "cancelado")} title={statusLabel.cancelado} />
+                    </Menu>
+                  </View>
+
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    Cliente: {s.client?.name ?? "-"}
                   </Text>
-                  <Menu
-                    visible={statusMenuFor === s.id}
-                    onDismiss={() => setStatusMenuFor(null)}
-                    anchor={
-                      <Button
-                        mode="outlined"
-                        compact
-                        onPress={() => setStatusMenuFor(s.id)}
-                        loading={updatingStatusId === s.id}
-                        disabled={updatingStatusId === s.id}
-                        style={[styles.statusTag, { borderColor: statusColor[s.status] }]}
-                        textColor={statusColor[s.status]}
-                      >
-                        {statusLabel[s.status]}
-                      </Button>
-                    }
-                  >
-                    <Menu.Item onPress={() => void changeStatus(s, "a_fazer")} title={statusLabel.a_fazer} />
-                    <Menu.Item onPress={() => void changeStatus(s, "em_andamento")} title={statusLabel.em_andamento} />
-                    <Menu.Item onPress={() => void changeStatus(s, "aguardando_peca")} title={statusLabel.aguardando_peca} />
-                    <Menu.Item onPress={() => void changeStatus(s, "concluido")} title={statusLabel.concluido} />
-                    <Menu.Item onPress={() => void changeStatus(s, "cancelado")} title={statusLabel.cancelado} />
-                  </Menu>
+
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    Serviço: {s.title}
+                  </Text>
+
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    descrição: {s.description}
+                  </Text>
+
+                  <Text variant="bodySmall">
+                    Pagamento: <Text style={{ color: paymentColor[s.payment] }}>{paymentLabels[s.payment]}</Text>
+                  </Text>
                 </View>
 
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  Cliente: {s.client?.name ?? "-"}
-                </Text>
-
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  Serviço: {s.title}
-                </Text>
-
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  descrição: {s.description}
-                </Text>
-
-                <Text variant="bodySmall">
-                  Pagamento: <Text style={{ color: paymentColor[s.payment] }}>{paymentLabels[s.payment]}</Text>
-                </Text>
-              </View>
-
-              <View style={[styles.midCol, compactCard && styles.midColCompact]}>
-                <View style={styles.datesRow}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <View style={styles.dateItem}>
-                      <MaterialCommunityIcons name="calendar-arrow-right" size={14} color={theme.colors.onSurfaceVariant} />
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {new Date(s.createdAt).toLocaleDateString("pt-BR")}
-                      </Text>
+                <View style={[styles.midCol, compactCard && styles.midColCompact]}>
+                  <View style={styles.datesRow}>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <View style={styles.dateItem}>
+                        <MaterialCommunityIcons name="calendar-arrow-right" size={14} color={theme.colors.onSurfaceVariant} />
+                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                          {new Date(s.createdAt).toLocaleDateString("pt-BR")}
+                        </Text>
+                      </View>
+                      <View style={styles.dateItem}>
+                        <MaterialCommunityIcons name="calendar-check" size={14} color={theme.colors.onSurfaceVariant} />
+                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                          {new Date(s.dueDate).toLocaleDateString("pt-BR")}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.dateItem}>
-                      <MaterialCommunityIcons name="calendar-check" size={14} color={theme.colors.onSurfaceVariant} />
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {new Date(s.dueDate).toLocaleDateString("pt-BR")}
-                      </Text>
-                    </View>
+                    <Button mode="outlined" compact onPress={() => router.push(`/servico/${s.id}`)} style={styles.editButton}>
+                      Editar
+                    </Button>
                   </View>
-                  <Button mode="outlined" compact onPress={() => router.push(`/servico/${s.id}`)} style={styles.editButton}>
-                    Editar
+                  <Text variant="titleLarge" style={styles.price}>
+                    {formatBRL(s.price)}
+                  </Text>
+
+                  {s.payment === "adiantado" && s.advanceAmount > 0 && (
+                    <View style={styles.advanceBox}>
+                      <Text variant="bodySmall" style={{ color: "#3B82F6" }}>
+                        Adiantado: {formatBRL(s.advanceAmount)}
+                      </Text>
+                      <Text variant="bodySmall" style={{ color: "#EF4444" }}>
+                        Restante: {formatBRL(s.price - s.advanceAmount)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.rightCol, compactCard && styles.rightColCompact]}>
+                  <Button
+                    mode="contained"
+                    icon="whatsapp"
+                    buttonColor="#25D366"
+                    textColor="#ffffff"
+                    onPress={() => setWhatsConfirm(s)}
+                    style={styles.whatsButton}
+                    compact
+                  >
+                    Enviar Status
                   </Button>
                 </View>
-                <Text variant="titleLarge" style={styles.price}>
-                  {formatBRL(s.price)}
-                </Text>
-              </View>
+              </Card.Content>
+            </Card>
+          ))}
+          {list.length === 0 ? (
+            <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
+              <Card.Content>
+                <Text variant="bodyMedium">Nenhuma ordem encontrada para os filtros atuais.</Text>
+              </Card.Content>
+            </Card>
+          ) : null}
+        </View>
+        <Snackbar visible={Boolean(snack)} onDismiss={() => setSnack("")} duration={2600}>
+          {snack}
+        </Snackbar>
+      </ScrollView>
 
-              <View style={[styles.rightCol, compactCard && styles.rightColCompact]}>
-                <Button
-                  mode="contained"
-                  icon="whatsapp"
-                  buttonColor="#25D366"
-                  textColor="#ffffff"
-                  onPress={() => void sendStatusWhatsApp(s)}
-                  style={styles.whatsButton}
-                  compact
-                >
-                  Enviar Status
-                </Button>
-              </View>
+      {whatsConfirm && (
+        <View style={styles.overlay}>
+          <Card style={styles.confirmCard}>
+            <Card.Content style={{ gap: 12 }}>
+              <Text variant="titleMedium">Enviar OS pelo WhatsApp?</Text>
+              <Text variant="bodyMedium" style={{ color: "#888" }}>
+                Enviando para {whatsConfirm.client?.name ?? "cliente"} ({whatsConfirm.client?.phone ?? "sem telefone"})
+              </Text>
+              <Button
+                mode="contained"
+                icon="whatsapp"
+                buttonColor="#25D366"
+                textColor="#fff"
+                onPress={() => {
+                  void sendStatusWhatsApp(whatsConfirm);
+                  setWhatsConfirm(null);
+                }}
+              >
+                Sim, enviar
+              </Button>
+              <Button mode="outlined" onPress={() => setWhatsConfirm(null)}>
+                Cancelar
+              </Button>
             </Card.Content>
           </Card>
-        ))}
-        {list.length === 0 ? (
-          <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
-            <Card.Content>
-              <Text variant="bodyMedium">Nenhuma ordem encontrada para os filtros atuais.</Text>
-            </Card.Content>
-          </Card>
-        ) : null}
-      </View>
-      <Snackbar visible={Boolean(snack)} onDismiss={() => setSnack("")} duration={2600}>
-        {snack}
-      </Snackbar>
-    </ScrollView>
+        </View>
+      )}
+    </>
   );
 }
 
@@ -298,6 +345,13 @@ const styles = StyleSheet.create({
     flex: 2,
     height: 44,
     fontSize: 13,
+  },
+  advanceBox: {
+    gap: 2,
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "#2A2A2A",
   },
   searchInputCompact: {
     minWidth: "100%",
@@ -394,5 +448,19 @@ const styles = StyleSheet.create({
     color: "#B8860B",
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    zIndex: 99,
+  },
+  confirmCard: {
+    borderRadius: 16,
   },
 });

@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
 import type { ComponentProps } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Text, useTheme } from "react-native-paper";
 import type { MD3Theme } from "react-native-paper/lib/typescript/types";
@@ -11,6 +11,7 @@ import { api, formatBRL, type Car, type Client, type Service } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
 import { StatCard } from "@/src/components/shared/StatCard";
 import { PaymentBadge, ServiceStatusBadge } from "@/src/components/shared/StatusBadges";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function DashboardPage() {
   const theme = useTheme();
@@ -20,19 +21,43 @@ export default function DashboardPage() {
   const [cars, setCars] = useState<Car[]>([]);
   const [services, setServices] = useState<Service[]>([]);
 
-  useEffect(() => {
+ useFocusEffect(
+  useCallback(() => {
     api.getClients().then(setClients).catch(() => setClients([]));
     api.getCars().then(setCars).catch(() => setCars([]));
     api.getServices().then(setServices).catch(() => setServices([]));
-  }, []);
+  }, [])
+);
 
-  const financialSummary = useMemo(() => {
-    const totalRecebido = services.filter((s) => s.payment === "pago").reduce((a, s) => a + s.price, 0);
-    const totalAdiantado = services.filter((s) => s.payment === "adiantado").reduce((a, s) => a + s.price, 0);
-    const totalPendente = services.filter((s) => s.payment === "pendente").reduce((a, s) => a + s.price, 0);
-    const servicosAbertos = services.filter((s) => s.status !== "concluido").length;
-    return { totalRecebido, totalAdiantado, totalPendente, servicosAbertos };
-  }, [services]);
+useEffect(() => {
+  api.getClients().then(setClients).catch(() => setClients([]));
+  api.getCars().then(setCars).catch(() => setCars([]));
+  api.getServices().then(setServices).catch(() => setServices([]));
+}, []);
+
+const financialSummary = useMemo(() => {
+  // Caixa = serviços pagos OU concluídos
+  const totalRecebido = services
+    .filter((s) => s.payment === "pago" || s.status === "concluido")
+    .reduce((a, s) => a + s.price, 0);
+
+  // Adiantado = só serviços que ainda NÃO foram pagos nem concluídos
+  const totalAdiantado = services
+    .filter((s) => s.payment === "adiantado" && s.status !== "concluido")
+    .reduce((a, s) => a + (s.advanceAmount ?? 0), 0);
+
+  // A receber = restante dos serviços abertos e não pagos
+  const totalPendente = services
+    .filter((s) => s.status !== "concluido" && s.payment !== "pago")
+    .reduce((a, s) => {
+      const restante = s.price - (s.advanceAmount ?? 0);
+      return a + (restante > 0 ? restante : 0);
+    }, 0);
+
+  const servicosAbertos = services.filter((s) => s.status !== "concluido").length;
+  return { totalRecebido, totalAdiantado, totalPendente, servicosAbertos };
+}, [services]);
+
 
   const upcoming = services.filter((s) => s.status !== "concluido").slice(0, 5);
 

@@ -78,6 +78,7 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
   const [snack, setSnack] = useState(false);
   const [snackMsg, setSnackMsg] = useState("");
   const [saving, setSaving] = useState(false);
+  const [advanceAmount, setAdvanceAmount] = useState("");
 
   useEffect(() => {
     api
@@ -101,6 +102,7 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
     setPayment(existing.payment);
     setEntryDate(formatDateBR(existing.createdAt));
     setDueDate(formatDateBR(existing.dueDate));
+    setAdvanceAmount(String(existing.advanceAmount ?? 0));
   }, [serviceId, services]);
 
   const carLabel = useMemo(() => {
@@ -153,6 +155,7 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
         status,
         payment,
         price: parsedPrice,
+        advanceAmount: payment === "adiantado" ? Number(String(advanceAmount).replace(",", ".")) || 0 : 0,
         dueDate: dueDateIso,
       };
       if (editing && serviceId) {
@@ -206,7 +209,6 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
               <TextInput mode="outlined" label="Serviço" placeholder="Ex: Troca de óleo + filtros" value={title} onChangeText={setTitle} />
               <TextInput mode="outlined" label="Descrição" placeholder="Detalhes, peças, observações..." value={description} onChangeText={setDescription} multiline numberOfLines={4} />
               <TextInput mode="outlined" label="Entrada (DD/MM/AAAA)" value={entryDate} editable={false} />
-
               <Text variant="labelLarge">Carro</Text>
               {cars.length === 0 ? (
                 <View style={styles.warningBox}>
@@ -263,6 +265,18 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
                   <Menu.Item key={k} onPress={() => { setPayment(k); setPayMenu(false); }} title={paymentLabels[k]} />
                 ))}
               </Menu>
+
+              
+              {payment === "adiantado" && (
+                <TextInput
+                  mode="outlined"
+                  label="Valor adiantado (R$)"
+                  placeholder="0"
+                  value={advanceAmount}
+                  onChangeText={setAdvanceAmount}
+                  keyboardType="decimal-pad"
+                />
+              )}
 
               <TextInput
                 mode="outlined"

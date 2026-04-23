@@ -69,6 +69,7 @@ model Service {
   status      ServiceStatus @default(a_fazer)
   payment     PaymentStatus @default(pendente)
   price       Float
+   advanceAmount Float         @default(0)
   dueDate     DateTime
   carId       String
   clientId    String

@@ -53,6 +53,7 @@ export interface Service {
   status: ServiceStatus;
   payment: PaymentStatus;
   price: number;
+  advanceAmount: number;
   dueDate: string;
   createdAt: string;
   carId: string;
@@ -105,7 +106,7 @@ export const api = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-setup-secret": data.setupSecret, 
+        "x-setup-secret": data.setupSecret,
       },
       body: JSON.stringify({ name: data.name }),
     }),
@@ -218,7 +219,7 @@ export const api = {
   getServices: () => request<Service[]>("/services"),
   getService: (id: string) => request<Service>(`/services/${id}`),
   createService: (
-    data: Pick<Service, "title" | "description" | "status" | "payment" | "price" | "dueDate" | "carId" | "clientId">,
+    data: Pick<Service, "title" | "description" | "status" | "payment" | "price" | "advanceAmount" | "dueDate" | "carId" | "clientId">,
   ) =>
     request<Service>("/services", {
       method: "POST",
@@ -227,7 +228,7 @@ export const api = {
     }),
   updateService: (
     id: string,
-    data: Pick<Service, "title" | "description" | "status" | "payment" | "price" | "dueDate" | "carId" | "clientId">,
+    data: Pick<Service, "title" | "description" | "status" | "payment" | "price" | "advanceAmount" | "dueDate" | "carId" | "clientId">,
   ) =>
     request<Service>(`/services/${id}`, {
       method: "PUT",
