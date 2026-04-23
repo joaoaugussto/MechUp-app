@@ -1,16 +1,16 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useRouter } from "expo-router";
 import type { ComponentProps } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import type { MD3Theme } from "react-native-paper/lib/typescript/types";
 import { Button, Card, Text, useTheme } from "react-native-paper";
+import type { MD3Theme } from "react-native-paper/lib/typescript/types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, formatBRL, type Car, type Client, type Service } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
-import { PaymentBadge, ServiceStatusBadge } from "@/src/components/shared/StatusBadges";
 import { StatCard } from "@/src/components/shared/StatCard";
+import { PaymentBadge, ServiceStatusBadge } from "@/src/components/shared/StatusBadges";
 
 export default function DashboardPage() {
   const theme = useTheme();
@@ -39,7 +39,7 @@ export default function DashboardPage() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
       keyboardShouldPersistTaps="handled"
     >
       <PageHeader
@@ -95,32 +95,41 @@ export default function DashboardPage() {
         <Card mode="outlined" style={[styles.mainCard, { borderColor: theme.colors.outlineVariant }]}>
           <Card.Title title="Próximos serviços" />
           <Card.Content style={{ gap: 10 }}>
-            {upcoming.map((s) => (
-              <Pressable
-                key={s.id}
-                onPress={() => router.push(`/servico/${s.id}`)}
-                style={({ pressed }) => [
-                  styles.serviceRow,
-                  { borderColor: theme.colors.outlineVariant, opacity: pressed ? 0.85 : 1 },
-                ]}
+            {upcoming.length === 0 ? (
+              <Text
+                variant="bodyMedium"
+                style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", paddingVertical: 8 }}
               >
-                <View style={styles.serviceText}>
-                  <Text variant="titleSmall" numberOfLines={1}>
-                    {s.title}
-                  </Text>
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
-                    {s.client?.name ?? "-"} · {(s.car && `${s.car.model} — ${s.car.plate}`) || "-"}
-                  </Text>
-                </View>
-                <View style={styles.badges}>
-                  <ServiceStatusBadge status={s.status} />
-                  <PaymentBadge status={s.payment} />
-                  <Text variant="titleSmall" style={{ color: "#B8860B", marginLeft: 4 }}>
-                    {formatBRL(s.price)}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
+                Não há serviços cadastrados.
+              </Text>
+            ) : (
+              upcoming.map((s) => (
+                <Pressable
+                  key={s.id}
+                  onPress={() => router.push(`/servico/${s.id}`)}
+                  style={({ pressed }) => [
+                    styles.serviceRow,
+                    { borderColor: theme.colors.outlineVariant, opacity: pressed ? 0.85 : 1 },
+                  ]}
+                >
+                  <View style={styles.serviceText}>
+                    <Text variant="titleSmall" numberOfLines={1}>
+                      {s.title}
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
+                      {s.client?.name ?? "-"} · {(s.car && `${s.car.model} — ${s.car.plate}`) || "-"}
+                    </Text>
+                  </View>
+                  <View style={styles.badges}>
+                    <ServiceStatusBadge status={s.status} />
+                    <PaymentBadge status={s.payment} />
+                    <Text variant="titleSmall" style={{ color: "#B8860B", marginLeft: 4 }}>
+                      {formatBRL(s.price)}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))
+            )}
           </Card.Content>
           <Card.Actions>
             <Button onPress={() => router.push("/services")}>Ver serviços</Button>

@@ -33,7 +33,7 @@ export default function CarsPage() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
     >
       <PageHeader
         title="Carros"
@@ -64,19 +64,25 @@ export default function CarsPage() {
               </View>
               <View style={styles.meta}>
                 <View style={styles.metaItem}>
-                  <MaterialCommunityIcons name="calendar" size={14} color={theme.colors.onSurfaceVariant} />
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  <MaterialCommunityIcons name="calendar" size={16} color={theme.colors.onSurfaceVariant} />
+                  <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600" }}>
                     {car.year}
                   </Text>
                 </View>
-                <View style={styles.metaItem}>
-                  <MaterialCommunityIcons name="account" size={14} color="#B8860B" />
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
+                <View style={styles.metaItemRight}>
+                  <MaterialCommunityIcons name="account" size={16} color="#B8860B" />
+                  <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600" }} numberOfLines={1}>
                     {car.client?.name ?? "-"}
                   </Text>
                 </View>
               </View>
-              <Button mode="text" icon="pencil" onPress={() => router.push(`/carro/${car.id}`)}>
+              <Button
+                mode="outlined"
+                icon="pencil"
+                onPress={() => router.push(`/carro/${car.id}`)}
+                style={styles.editButton}
+                contentStyle={styles.editButtonContent}
+              >
                 Editar
               </Button>
             </Card.Content>
@@ -103,15 +109,26 @@ const styles = StyleSheet.create({
   },
   meta: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    flexWrap: "wrap",
   },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    flex: 1,
-    minWidth: 0,
+  },
+  metaItemRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    justifyContent: "flex-end",
+  },
+  editButton: {
+    borderRadius: 24,
+    marginTop: 4,
+  },
+  editButtonContent: {
+    paddingHorizontal: 8,
   },
 });

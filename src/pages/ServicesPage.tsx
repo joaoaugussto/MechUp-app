@@ -1,11 +1,12 @@
+import { api, formatBRL, type Service, type ServiceStatus } from "@/lib/api";
+import { paymentColor, paymentLabels } from "@/src/pages/ServiceFormPage";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Linking, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Button, Card, Menu, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import { api, formatBRL, type Service, type ServiceStatus } from "@/lib/api";
 
 type Filter = "todos" | ServiceStatus;
 const filterLabel: Record<Filter, string> = {
@@ -22,6 +23,14 @@ const statusLabel: Record<ServiceStatus, string> = {
   concluido: "Concluído",
   aguardando_peca: "Aguardando peça",
   cancelado: "Cancelado",
+};
+
+const statusColor: Record<ServiceStatus, string> = {
+  a_fazer: "#F59E0B",
+  em_andamento: "#3B82F6",
+  concluido: "#22C55E",
+  aguardando_peca: "#A855F7",
+  cancelado: "#EF4444",
 };
 
 export default function ServicesPage() {
@@ -101,7 +110,7 @@ export default function ServicesPage() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.headerRow}>
@@ -125,16 +134,24 @@ export default function ServicesPage() {
       <View style={styles.filtersRow}>
         <TextInput
           mode="outlined"
-          placeholder="Buscar placa/cliente/serviço..."
+          placeholder="Procurar Serviço"
           value={query}
           onChangeText={setQuery}
-          style={[styles.searchInput, compactCard && styles.searchInputCompact]}
+          style={styles.searchInput}
+          outlineStyle={{ borderRadius: 24 }}
+          left={<TextInput.Icon icon="magnify" size={18} />}
+          dense
         />
         <Menu
           visible={filterMenuOpen}
           onDismiss={() => setFilterMenuOpen(false)}
           anchor={
-            <Button mode="outlined" onPress={() => setFilterMenuOpen(true)} style={[styles.filterButton, compactCard && styles.filterButtonCompact]}>
+            <Button
+              mode="outlined"
+              onPress={() => setFilterMenuOpen(true)}
+              style={[styles.filterButton, { borderColor: filter === "todos" ? theme.colors.outline : statusColor[filter as ServiceStatus] }]}
+              textColor={filter === "todos" ? theme.colors.onSurface : statusColor[filter as ServiceStatus]}
+            >
               {filterLabel[filter]}
             </Button>
           }
@@ -150,59 +167,79 @@ export default function ServicesPage() {
 
       <View style={styles.list}>
         {list.map((s) => (
-          <Card key={s.id} mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
+          <Card key={s.id} mode="outlined" style={{
+            borderColor: theme.colors.outlineVariant,
+            borderLeftColor: statusColor[s.status], borderLeftWidth: 4, overflow: "hidden"
+          }}>
             <Card.Content style={[styles.cardContent, compactCard && styles.cardContentCompact]}>
               <View style={styles.leftCol}>
                 <View style={styles.titleRow}>
-                    <Text variant="titleSmall" style={{ flex: 1 }}>
+                  <Text variant="titleSmall" style={{ flex: 1 }}>
                     {(s.car?.model ?? "Sem carro")} - {s.car?.plate ?? "-"}
                   </Text>
-                    <Menu
-                      visible={statusMenuFor === s.id}
-                      onDismiss={() => setStatusMenuFor(null)}
-                      anchor={
-                        <Button
-                          mode="outlined"
-                          compact
-                          onPress={() => setStatusMenuFor(s.id)}
-                          loading={updatingStatusId === s.id}
-                          disabled={updatingStatusId === s.id}
-                          style={styles.statusTag}
-                        >
-                          {statusLabel[s.status]}
-                        </Button>
-                      }
-                    >
-                      <Menu.Item onPress={() => void changeStatus(s, "a_fazer")} title={statusLabel.a_fazer} />
-                      <Menu.Item onPress={() => void changeStatus(s, "em_andamento")} title={statusLabel.em_andamento} />
-                      <Menu.Item onPress={() => void changeStatus(s, "aguardando_peca")} title={statusLabel.aguardando_peca} />
-                      <Menu.Item onPress={() => void changeStatus(s, "concluido")} title={statusLabel.concluido} />
-                      <Menu.Item onPress={() => void changeStatus(s, "cancelado")} title={statusLabel.cancelado} />
-                    </Menu>
+                  <Menu
+                    visible={statusMenuFor === s.id}
+                    onDismiss={() => setStatusMenuFor(null)}
+                    anchor={
+                      <Button
+                        mode="outlined"
+                        compact
+                        onPress={() => setStatusMenuFor(s.id)}
+                        loading={updatingStatusId === s.id}
+                        disabled={updatingStatusId === s.id}
+                        style={[styles.statusTag, { borderColor: statusColor[s.status] }]}
+                        textColor={statusColor[s.status]}
+                      >
+                        {statusLabel[s.status]}
+                      </Button>
+                    }
+                  >
+                    <Menu.Item onPress={() => void changeStatus(s, "a_fazer")} title={statusLabel.a_fazer} />
+                    <Menu.Item onPress={() => void changeStatus(s, "em_andamento")} title={statusLabel.em_andamento} />
+                    <Menu.Item onPress={() => void changeStatus(s, "aguardando_peca")} title={statusLabel.aguardando_peca} />
+                    <Menu.Item onPress={() => void changeStatus(s, "concluido")} title={statusLabel.concluido} />
+                    <Menu.Item onPress={() => void changeStatus(s, "cancelado")} title={statusLabel.cancelado} />
+                  </Menu>
                 </View>
+
                 <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                   Cliente: {s.client?.name ?? "-"}
                 </Text>
+
                 <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                   Serviço: {s.title}
+                </Text>
+
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  descrição: {s.description}
+                </Text>
+
+                <Text variant="bodySmall">
+                  Pagamento: <Text style={{ color: paymentColor[s.payment] }}>{paymentLabels[s.payment]}</Text>
                 </Text>
               </View>
 
               <View style={[styles.midCol, compactCard && styles.midColCompact]}>
                 <View style={styles.datesRow}>
                   <View style={{ flex: 1, gap: 4 }}>
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                      Entrada: {new Date(s.createdAt).toLocaleDateString("pt-BR")}
-                    </Text>
-                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                      Saída: {new Date(s.dueDate).toLocaleDateString("pt-BR")}
-                    </Text>
+                    <View style={styles.dateItem}>
+                      <MaterialCommunityIcons name="calendar-arrow-right" size={14} color={theme.colors.onSurfaceVariant} />
+                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                        {new Date(s.createdAt).toLocaleDateString("pt-BR")}
+                      </Text>
+                    </View>
+                    <View style={styles.dateItem}>
+                      <MaterialCommunityIcons name="calendar-check" size={14} color={theme.colors.onSurfaceVariant} />
+                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                        {new Date(s.dueDate).toLocaleDateString("pt-BR")}
+                      </Text>
+                    </View>
                   </View>
                   <Button mode="outlined" compact onPress={() => router.push(`/servico/${s.id}`)} style={styles.editButton}>
                     Editar
                   </Button>
                 </View>
-                <Text variant="titleSmall" style={styles.price}>
+                <Text variant="titleLarge" style={styles.price}>
                   {formatBRL(s.price)}
                 </Text>
               </View>
@@ -254,21 +291,22 @@ const styles = StyleSheet.create({
   },
   filtersRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
     alignItems: "center",
-    flexWrap: "wrap",
   },
   searchInput: {
-    flex: 1,
-    minWidth: 260,
-    maxWidth: 520,
+    flex: 2,
+    height: 44,
+    fontSize: 13,
   },
   searchInputCompact: {
     minWidth: "100%",
     maxWidth: 9999,
   },
   filterButton: {
-    minWidth: 180,
+    justifyContent: "center",
+    alignSelf: "center",
+    flexShrink: 0,
   },
   filterButtonCompact: {
     minWidth: 180,
@@ -280,9 +318,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     alignItems: "flex-start",
+    paddingLeft: 12,
   },
   cardContentCompact: {
     flexDirection: "column",
+  },
+  statusBar: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    borderRadius: 2,
   },
   leftCol: {
     flex: 2,
@@ -310,6 +357,11 @@ const styles = StyleSheet.create({
     gap: 4,
     minWidth: 0,
     alignItems: "flex-start",
+  },
+  dateItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   datesRow: {
     width: "100%",
@@ -340,5 +392,7 @@ const styles = StyleSheet.create({
   },
   price: {
     color: "#B8860B",
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 });

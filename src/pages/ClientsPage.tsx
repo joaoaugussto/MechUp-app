@@ -3,7 +3,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Card, IconButton, Text, TextInput, useTheme } from "react-native-paper";
+import { Button, Card, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, type Client } from "@/lib/api";
@@ -40,7 +40,7 @@ export default function ClientsPage() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
       keyboardShouldPersistTaps="handled"
     >
       <PageHeader
@@ -90,7 +90,14 @@ export default function ClientsPage() {
                   </View>
                 </View>
               </View>
-              <IconButton icon="pencil" mode="outlined" onPress={() => router.push(`/cliente/${c.id}`)} />
+              <Button
+                mode="outlined"
+                icon="pencil"
+                onPress={() => router.push(`/cliente/${c.id}`)}
+                style={{ borderRadius: 24 }}
+              >
+                Editar
+              </Button>
             </Card.Content>
           </Card>
         ))}

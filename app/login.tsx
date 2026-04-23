@@ -64,50 +64,53 @@ export default function LoginPage() {
   return (
     <>
       <View style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1, backgroundColor: theme.colors.background }}
-        contentContainerStyle={[
-          styles.container,
-          { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
-        ]}
-      >
-        <IconButton
-          icon="dots-horizontal"
-          size={22}
-          style={[styles.adminDots, { top: insets.top + 8 }]}
-          iconColor={theme.colors.onSurfaceVariant}
-          onPress={() => setAdminAccessVisible(true)}
-        />
-        <View style={styles.header}>
-          <Text variant="headlineMedium">Entrar</Text>
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-            Faça login para acessar o app.
-          </Text>
-        </View>
+        <ScrollView
+          style={{ flex: 1, backgroundColor: theme.colors.background }}
+          contentContainerStyle={[
+            styles.container,
+            { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }
+          ]}
+        >
+          <IconButton
+            icon="dots-horizontal"
+            size={22}
+            style={[styles.adminDots, { top: insets.top + 8 }]}
+            iconColor={theme.colors.onSurfaceVariant}
+            onPress={() => setAdminAccessVisible(true)}
+          />
+          <View style={styles.header}>
+            {/* Título MechUpp com Upp amarelo */}
+            <Text style={{ textAlign: "center", fontSize: 52, fontWeight: "900", letterSpacing: 2 }}>
+              Mech<Text style={{ color: "#C8960C", fontSize: 52, fontWeight: "900", letterSpacing: 2 }}>Upp</Text>
+            </Text>
+            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
+              Faça login para acessar o app.
+            </Text>
+          </View>
 
-        <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
-          <Card.Content style={styles.form}>
-            <TextInput
-              mode="outlined"
-              label="E-mail"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            <TextInput
-              mode="outlined"
-              label="Senha"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-            <Button mode="contained" loading={loading} disabled={loading} onPress={onSubmit}>
-              Entrar
-            </Button>
-          </Card.Content>
-        </Card>
-      </ScrollView>
+          <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
+            <Card.Content style={styles.form}>
+              <TextInput
+                mode="outlined"
+                label="E-mail"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+              <TextInput
+                mode="outlined"
+                label="Senha"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+              <Button mode="contained" loading={loading} disabled={loading} onPress={onSubmit}>
+                Entrar
+              </Button>
+            </Card.Content>
+          </Card>
+        </ScrollView>
       </View>
 
       <Modal visible={adminAccessVisible} transparent animationType="fade">
@@ -162,6 +165,8 @@ const styles = StyleSheet.create({
     maxWidth: 520,
     width: "100%",
     alignSelf: "center",
+    flexGrow: 1,                  // ← ocupa a tela toda
+    justifyContent: "center",     // ← centraliza verticalmente
   },
   adminDots: {
     position: "absolute",
@@ -170,6 +175,7 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 8,
+    alignItems: "center",         // ← centraliza horizontalmente
   },
   form: {
     gap: 12,

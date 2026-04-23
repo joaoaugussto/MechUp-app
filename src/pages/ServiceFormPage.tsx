@@ -11,7 +11,7 @@ export interface ServiceFormPageProps {
   serviceId?: string;
 }
 
-const statusLabels: Record<ServiceStatus, string> = {
+export const statusLabels: Record<ServiceStatus, string> = {
   a_fazer: "A fazer",
   em_andamento: "Em andamento",
   concluido: "Concluído",
@@ -19,10 +19,24 @@ const statusLabels: Record<ServiceStatus, string> = {
   cancelado: "Cancelado",
 };
 
-const paymentLabels: Record<PaymentStatus, string> = {
+export const statusColor: Record<ServiceStatus, string> = {
+  a_fazer: "#F59E0B",
+  em_andamento: "#3B82F6",
+  concluido: "#22C55E",
+  aguardando_peca: "#A855F7",
+  cancelado: "#EF4444",
+};
+
+export const paymentLabels: Record<PaymentStatus, string> = {
   pendente: "Pendente",
   adiantado: "Adiantado",
   pago: "Pago",
+};
+
+export const paymentColor: Record<PaymentStatus, string> = {
+  pendente: "#EF4444",
+  adiantado: "#3B82F6",
+  pago: "#22C55E",
 };
 
 const formatDateBR = (isoDate: string) => {
@@ -169,8 +183,8 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
     <>
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: theme.colors.background }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        keyboardVerticalOffset={80}
       >
         <ScrollView
           style={{ flex: 1, backgroundColor: theme.colors.background }}
@@ -182,84 +196,116 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
             Voltar
           </Button>
 
-        <PageHeader
-          title={editing ? "Editar serviço" : "Nova ordem de serviço"}
-          description="Defina o serviço, valor e status de pagamento."
-        />
+          <PageHeader
+            title={editing ? "Editar serviço" : "Nova ordem de serviço"}
+            description="Defina o serviço, valor e status de pagamento."
+          />
 
           <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
             <Card.Content style={{ gap: 16, paddingTop: 16 }}>
-            <TextInput mode="outlined" label="Serviço" placeholder="Ex: Troca de óleo + filtros" value={title} onChangeText={setTitle} />
-            <TextInput mode="outlined" label="Descrição" placeholder="Detalhes, peças, observações..." value={description} onChangeText={setDescription} multiline numberOfLines={4} />
-            <TextInput mode="outlined" label="Entrada (DD/MM/AAAA)" value={entryDate} editable={false} />
+              <TextInput mode="outlined" label="Serviço" placeholder="Ex: Troca de óleo + filtros" value={title} onChangeText={setTitle} />
+              <TextInput mode="outlined" label="Descrição" placeholder="Detalhes, peças, observações..." value={description} onChangeText={setDescription} multiline numberOfLines={4} />
+              <TextInput mode="outlined" label="Entrada (DD/MM/AAAA)" value={entryDate} editable={false} />
 
-            <Text variant="labelLarge">Carro</Text>
-            {cars.length === 0 ? (
-              <View style={styles.warningBox}>
-                <Text variant="bodyMedium">Por favor, cadastre um carro antes de criar uma OS.</Text>
-                <Button mode="outlined" onPress={() => router.push("/carro/novo")}>
-                  Cadastrar carro
-                </Button>
-              </View>
-            ) : (
-              <Menu visible={carMenu} onDismiss={() => setCarMenu(false)} anchor={<Button mode="outlined" onPress={() => setCarMenu(true)}>{carLabel}</Button>}>
-                {cars.map((c) => (
-                  <Menu.Item
-                    key={c.id}
-                    onPress={() => {
-                      setCarId(c.id);
-                      setCarMenu(false);
-                    }}
-                    title={`${c.model} — ${c.plate}`}
-                  />
-                ))}
-              </Menu>
-            )}
+              <Text variant="labelLarge">Carro</Text>
+              {cars.length === 0 ? (
+                <View style={styles.warningBox}>
+                  <Text variant="bodyMedium">Por favor, cadastre um carro antes de criar uma OS.</Text>
+                  <Button mode="outlined" onPress={() => router.push("/carro/novo")}>
+                    Cadastrar carro
+                  </Button>
+                </View>
+              ) : (
+                <Menu visible={carMenu} onDismiss={() => setCarMenu(false)} anchor={<Button mode="outlined" onPress={() => setCarMenu(true)}>{carLabel}</Button>}>
+                  {cars.map((c) => (
+                    <Menu.Item
+                      key={c.id}
+                      onPress={() => {
+                        setCarId(c.id);
+                        setCarMenu(false);
+                      }}
+                      title={`${c.model} — ${c.plate}`}
+                    />
+                  ))}
+                </Menu>
+              )}
 
-            <TextInput mode="outlined" label="Valor (R$)" placeholder="0" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+              <TextInput mode="outlined" label="Valor (R$)" placeholder="0" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
 
-            <Text variant="labelLarge">Status do serviço</Text>
-            <Menu visible={statusMenu} onDismiss={() => setStatusMenu(false)} anchor={<Button mode="outlined" onPress={() => setStatusMenu(true)}>{statusLabels[status]}</Button>}>
-              {(Object.keys(statusLabels) as ServiceStatus[]).map((k) => (
-                <Menu.Item key={k} onPress={() => { setStatus(k); setStatusMenu(false); }} title={statusLabels[k]} />
-              ))}
-            </Menu>
-
-            <Text variant="labelLarge">Pagamento</Text>
-            <Menu visible={payMenu} onDismiss={() => setPayMenu(false)} anchor={<Button mode="outlined" onPress={() => setPayMenu(true)}>{paymentLabels[payment]}</Button>}>
-              {(Object.keys(paymentLabels) as PaymentStatus[]).map((k) => (
-                <Menu.Item key={k} onPress={() => { setPayment(k); setPayMenu(false); }} title={paymentLabels[k]} />
-              ))}
-            </Menu>
-
-            <TextInput mode="outlined" label="Previsão (DD/MM/AAAA)" placeholder="20/04/2026" value={dueDate} onChangeText={setDueDate} keyboardType="number-pad" />
-
-            <View style={styles.actions}>
-              <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving || cars.length === 0}>
-                {editing ? "Salvar alterações" : "Cadastrar OS"}
-              </Button>
-              {editing ? (
+              <Text variant="labelLarge">Status do serviço</Text>
+              <Menu visible={statusMenu} onDismiss={() => setStatusMenu(false)} anchor={
                 <Button
                   mode="outlined"
-                  textColor={theme.colors.error}
-                  icon="delete"
-                  onPress={async () => {
-                    try {
-                      if (!serviceId) return;
-                      await api.deleteService(serviceId);
-                      setSnackMsg("Serviço excluído com sucesso.");
-                      setSnack(true);
-                      router.back();
-                    } catch {
-                      setSnackMsg("Erro ao excluir serviço.");
-                      setSnack(true);
-                    }
-                  }}
+                  onPress={() => setStatusMenu(true)}
+                  style={{ borderColor: statusColor[status] }}
+                  textColor={statusColor[status]}
                 >
-                  Excluir
+                  {statusLabels[status]}
                 </Button>
-              ) : null}
-            </View>
+              }>
+                {(Object.keys(statusLabels) as ServiceStatus[]).map((k) => (
+                  <Menu.Item key={k} onPress={() => { setStatus(k); setStatusMenu(false); }} title={statusLabels[k]} />
+                ))}
+              </Menu>
+
+              <Text variant="labelLarge">Pagamento</Text>
+              <Menu visible={payMenu} onDismiss={() => setPayMenu(false)} anchor={
+                <Button
+                  mode="outlined"
+                  onPress={() => setPayMenu(true)}
+                  style={{ borderColor: paymentColor[payment] }}
+                  textColor={paymentColor[payment]}
+                >
+                  {paymentLabels[payment]}
+                </Button>
+              }>
+                {(Object.keys(paymentLabels) as PaymentStatus[]).map((k) => (
+                  <Menu.Item key={k} onPress={() => { setPayment(k); setPayMenu(false); }} title={paymentLabels[k]} />
+                ))}
+              </Menu>
+
+              <TextInput
+                mode="outlined"
+                label="Previsão (DD/MM/AAAA)"
+                placeholder="20/04/2026"
+                value={dueDate}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/\D/g, "");
+                  let masked = cleaned;
+                  if (cleaned.length > 2) masked = cleaned.slice(0, 2) + "/" + cleaned.slice(2);
+                  if (cleaned.length > 4) masked = cleaned.slice(0, 2) + "/" + cleaned.slice(2, 4) + "/" + cleaned.slice(4, 8);
+                  setDueDate(masked);
+                }}
+                keyboardType="number-pad"
+                maxLength={10}
+              />
+
+              <View style={styles.actions}>
+                <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving || cars.length === 0}>
+                  {editing ? "Salvar alterações" : "Cadastrar OS"}
+                </Button>
+                {editing ? (
+                  <Button
+                    mode="outlined"
+                    textColor={theme.colors.error}
+                    icon="delete"
+                    onPress={async () => {
+                      try {
+                        if (!serviceId) return;
+                        await api.deleteService(serviceId);
+                        setSnackMsg("Serviço excluído com sucesso.");
+                        setSnack(true);
+                        router.back();
+                      } catch {
+                        setSnackMsg("Erro ao excluir serviço.");
+                        setSnack(true);
+                      }
+                    }}
+                  >
+                    Excluir
+                  </Button>
+                ) : null}
+              </View>
             </Card.Content>
           </Card>
         </ScrollView>
