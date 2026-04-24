@@ -12,6 +12,7 @@ import { PageHeader } from "@/src/components/shared/PageHeader";
 import { StatCard } from "@/src/components/shared/StatCard";
 import { PaymentBadge, ServiceStatusBadge } from "@/src/components/shared/StatusBadges";
 import { useFocusEffect } from "@react-navigation/native";
+import { useAuth } from "../auth/AuthProvider";
 
 export default function DashboardPage() {
   const theme = useTheme();
@@ -21,42 +22,45 @@ export default function DashboardPage() {
   const [cars, setCars] = useState<Car[]>([]);
   const [services, setServices] = useState<Service[]>([]);
 
- useFocusEffect(
-  useCallback(() => {
+  useFocusEffect(
+    useCallback(() => {
+      api.getClients().then(setClients).catch(() => setClients([]));
+      api.getCars().then(setCars).catch(() => setCars([]));
+      api.getServices().then(setServices).catch(() => setServices([]));
+    }, [])
+  );
+
+  const { token, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading || !token) return;
     api.getClients().then(setClients).catch(() => setClients([]));
     api.getCars().then(setCars).catch(() => setCars([]));
     api.getServices().then(setServices).catch(() => setServices([]));
-  }, [])
-);
+  }, [token, loading]);
 
-useEffect(() => {
-  api.getClients().then(setClients).catch(() => setClients([]));
-  api.getCars().then(setCars).catch(() => setCars([]));
-  api.getServices().then(setServices).catch(() => setServices([]));
-}, []);
+  const financialSummary = useMemo(() => {
+    // Caixa = serviços pagos OU concluídos
+    const totalRecebido = services
+      .filter((s) => s.payment === "pago" || s.status === "concluido")
+      .reduce((a, s) => a + s.price, 0);
 
-const financialSummary = useMemo(() => {
-  // Caixa = serviços pagos OU concluídos
-  const totalRecebido = services
-    .filter((s) => s.payment === "pago" || s.status === "concluido")
-    .reduce((a, s) => a + s.price, 0);
+    // Adiantado = só serviços que ainda NÃO foram pagos nem concluídos
+    const totalAdiantado = services
+      .filter((s) => s.payment === "adiantado" && s.status !== "concluido")
+      .reduce((a, s) => a + (s.advanceAmount ?? 0), 0);
 
-  // Adiantado = só serviços que ainda NÃO foram pagos nem concluídos
-  const totalAdiantado = services
-    .filter((s) => s.payment === "adiantado" && s.status !== "concluido")
-    .reduce((a, s) => a + (s.advanceAmount ?? 0), 0);
+    // A receber = restante dos serviços abertos e não pagos
+    const totalPendente = services
+      .filter((s) => s.status !== "concluido" && s.payment !== "pago")
+      .reduce((a, s) => {
+        const restante = s.price - (s.advanceAmount ?? 0);
+        return a + (restante > 0 ? restante : 0);
+      }, 0);
 
-  // A receber = restante dos serviços abertos e não pagos
-  const totalPendente = services
-    .filter((s) => s.status !== "concluido" && s.payment !== "pago")
-    .reduce((a, s) => {
-      const restante = s.price - (s.advanceAmount ?? 0);
-      return a + (restante > 0 ? restante : 0);
-    }, 0);
-
-  const servicosAbertos = services.filter((s) => s.status !== "concluido").length;
-  return { totalRecebido, totalAdiantado, totalPendente, servicosAbertos };
-}, [services]);
+    const servicosAbertos = services.filter((s) => s.status !== "concluido").length;
+    return { totalRecebido, totalAdiantado, totalPendente, servicosAbertos };
+  }, [services]);
 
 
   const upcoming = services.filter((s) => s.status !== "concluido").slice(0, 5);

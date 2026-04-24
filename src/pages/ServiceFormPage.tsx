@@ -266,18 +266,20 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
                 ))}
               </Menu>
 
-              
               {payment === "adiantado" && (
                 <TextInput
                   mode="outlined"
                   label="Valor adiantado (R$)"
-                  placeholder="0"
+                  placeholder="Ex: 150.00"
                   value={advanceAmount}
-                  onChangeText={setAdvanceAmount}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9.,]/g, "");
+                    setAdvanceAmount(cleaned);
+                  }}
                   keyboardType="decimal-pad"
                 />
               )}
-
+              
               <TextInput
                 mode="outlined"
                 label="Previsão (DD/MM/AAAA)"

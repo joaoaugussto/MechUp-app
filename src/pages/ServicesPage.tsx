@@ -1,10 +1,10 @@
-import { api, formatBRL, type Service, type ServiceStatus } from "@/lib/api";
+import { api, formatBRL, type PaymentStatus, type Service, type ServiceStatus } from "@/lib/api";
 import { paymentColor, paymentLabels } from "@/src/pages/ServiceFormPage";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Linking, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Linking, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { Button, Card, Menu, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -47,6 +47,10 @@ export default function ServicesPage() {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [snack, setSnack] = useState("");
   const [whatsConfirm, setWhatsConfirm] = useState<Service | null>(null);
+  const [advancePopup, setAdvancePopup] = useState<Service | null>(null);
+  const [advanceInput, setAdvanceInput] = useState("");
+  const [savingAdvance, setSavingAdvance] = useState(false);
+
 
   const loadServices = useCallback(async () => {
     try {
@@ -110,6 +114,74 @@ export default function ServicesPage() {
       await Linking.openURL(url);
     } catch {
       setSnack("Não foi possível abrir o WhatsApp.");
+    }
+  };
+
+  const [paymentMenuFor, setPaymentMenuFor] = useState<string | null>(null);
+
+
+  const changePayment = async (service: Service, next: PaymentStatus) => {
+    setPaymentMenuFor(null);
+    if (next === "adiantado") {
+      setAdvanceInput(service.advanceAmount > 0 ? String(service.advanceAmount) : "");
+      setAdvancePopup(service);
+      return;
+    }
+    try {
+      await api.updateService(service.id, {
+        title: service.title,
+        description: service.description,
+        status: service.status,
+        payment: next,
+        price: service.price,
+        advanceAmount: 0,
+        dueDate: service.dueDate,
+        carId: service.carId,
+        clientId: service.clientId,
+      });
+      setServices((prev) =>
+        prev.map((s) =>
+          s.id === service.id ? { ...s, payment: next, advanceAmount: 0 } : s
+        )
+      );
+    } catch {
+      setSnack("Erro ao atualizar pagamento.");
+    }
+  };
+
+  const confirmAdvance = async () => {
+    if (!advancePopup || savingAdvance) return;
+    const parsed = Number(String(advanceInput).replace(",", "."));
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setSnack("Informe um valor válido.");
+      return;
+    }
+    setSavingAdvance(true);
+    try {
+      await api.updateService(advancePopup.id, {
+        title: advancePopup.title,
+        description: advancePopup.description,
+        status: advancePopup.status,
+        payment: "adiantado",
+        price: advancePopup.price,
+        advanceAmount: parsed,
+        dueDate: advancePopup.dueDate,
+        carId: advancePopup.carId,
+        clientId: advancePopup.clientId,
+      });
+      setServices((prev) =>
+        prev.map((s) =>
+          s.id === advancePopup.id
+            ? { ...s, payment: "adiantado", advanceAmount: parsed }
+            : s
+        )
+      );
+      setAdvancePopup(null);
+      setAdvanceInput("");
+    } catch {
+      setSnack("Erro ao salvar valor adiantado.");
+    } finally {
+      setSavingAdvance(false);
     }
   };
 
@@ -179,11 +251,34 @@ export default function ServicesPage() {
               borderLeftColor: statusColor[s.status], borderLeftWidth: 4, overflow: "hidden"
             }}>
               <Card.Content style={[styles.cardContent, compactCard && styles.cardContentCompact]}>
-                <View style={styles.leftCol}>
-                  <View style={styles.titleRow}>
-                    <Text variant="titleSmall" style={{ flex: 1 }}>
+
+                {/* Linha superior: textos à esquerda, botões à direita */}
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+
+                  {/* Coluna esquerda: título + textos juntos */}
+                  <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+                    <Text variant="titleLarge" style={{ fontWeight: "700" }}>
                       {(s.car?.model ?? "Sem carro")} - {s.car?.plate ?? "-"}
                     </Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      Cliente: {s.client?.name ?? "-"}
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      Serviço: {s.title}
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      descrição: {s.description}
+                    </Text>
+                    <Text variant="bodySmall">
+                      Pagamento: <Text style={{ color: paymentColor[s.payment] }}>{paymentLabels[s.payment]}</Text>
+                    </Text>
+                  </View>
+
+                  {/* Coluna direita: botões */}
+                  <View style={styles.tagsCol}>
+                    <Button mode="outlined" compact onPress={() => router.push(`/servico/${s.id}`)} style={styles.editButton}>
+                      Editar
+                    </Button>
                     <Menu
                       visible={statusMenuFor === s.id}
                       onDismiss={() => setStatusMenuFor(null)}
@@ -207,61 +302,64 @@ export default function ServicesPage() {
                       <Menu.Item onPress={() => void changeStatus(s, "concluido")} title={statusLabel.concluido} />
                       <Menu.Item onPress={() => void changeStatus(s, "cancelado")} title={statusLabel.cancelado} />
                     </Menu>
+                    <Menu
+                      visible={paymentMenuFor === s.id}
+                      onDismiss={() => setPaymentMenuFor(null)}
+                      anchor={
+                        <Button
+                          mode="outlined"
+                          compact
+                          onPress={() => setPaymentMenuFor(s.id)}
+                          style={[styles.paymentTag, { borderColor: paymentColor[s.payment as PaymentStatus] }]}
+                          textColor={paymentColor[s.payment as PaymentStatus]}
+                        >
+                          {paymentLabels[s.payment as PaymentStatus]}
+                        </Button>
+                      }
+                    >
+                      <Menu.Item onPress={() => void changePayment(s, "pendente")} title={paymentLabels.pendente} />
+                      <Menu.Item onPress={() => void changePayment(s, "adiantado")} title={paymentLabels.adiantado} />
+                      <Menu.Item onPress={() => void changePayment(s, "pago")} title={paymentLabels.pago} />
+                    </Menu>
                   </View>
-
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    Cliente: {s.client?.name ?? "-"}
-                  </Text>
-
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    Serviço: {s.title}
-                  </Text>
-
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    descrição: {s.description}
-                  </Text>
-
-                  <Text variant="bodySmall">
-                    Pagamento: <Text style={{ color: paymentColor[s.payment] }}>{paymentLabels[s.payment]}</Text>
-                  </Text>
                 </View>
 
+                {/* Datas e preço */}
                 <View style={[styles.midCol, compactCard && styles.midColCompact]}>
                   <View style={styles.datesRow}>
                     <View style={{ flex: 1, gap: 4 }}>
                       <View style={styles.dateItem}>
-                        <MaterialCommunityIcons name="calendar-arrow-right" size={14} color={theme.colors.onSurfaceVariant} />
+                        <MaterialCommunityIcons name="calendar-arrow-right" size={25} color={theme.colors.onSurfaceVariant} />
                         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                           {new Date(s.createdAt).toLocaleDateString("pt-BR")}
                         </Text>
                       </View>
                       <View style={styles.dateItem}>
-                        <MaterialCommunityIcons name="calendar-check" size={14} color={theme.colors.onSurfaceVariant} />
+                        <MaterialCommunityIcons name="calendar-check" size={25} color={theme.colors.onSurfaceVariant} />
                         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                           {new Date(s.dueDate).toLocaleDateString("pt-BR")}
                         </Text>
                       </View>
                     </View>
-                    <Button mode="outlined" compact onPress={() => router.push(`/servico/${s.id}`)} style={styles.editButton}>
-                      Editar
-                    </Button>
-                  </View>
-                  <Text variant="titleLarge" style={styles.price}>
-                    {formatBRL(s.price)}
-                  </Text>
-
-                  {s.payment === "adiantado" && s.advanceAmount > 0 && (
-                    <View style={styles.advanceBox}>
-                      <Text variant="bodySmall" style={{ color: "#3B82F6" }}>
-                        Adiantado: {formatBRL(s.advanceAmount)}
+                    <View style={styles.priceCol}>
+                      <Text variant="titleLarge" style={styles.price}>
+                        {formatBRL(s.price)}
                       </Text>
-                      <Text variant="bodySmall" style={{ color: "#EF4444" }}>
-                        Restante: {formatBRL(s.price - s.advanceAmount)}
-                      </Text>
+                      {s.payment === "adiantado" && s.advanceAmount > 0 && (
+                        <View style={styles.advanceBox}>
+                          <Text variant="bodySmall" style={{ color: "#3B82F6" }}>
+                            Adiantado: {formatBRL(s.advanceAmount)}
+                          </Text>
+                          <Text variant="bodySmall" style={{ color: "#EF4444" }}>
+                            Restante: {formatBRL(s.price - s.advanceAmount)}
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                  )}
+                  </View>
                 </View>
 
+                {/* Botão WhatsApp */}
                 <View style={[styles.rightCol, compactCard && styles.rightColCompact]}>
                   <Button
                     mode="contained"
@@ -275,6 +373,7 @@ export default function ServicesPage() {
                     Enviar Status
                   </Button>
                 </View>
+
               </Card.Content>
             </Card>
           ))}
@@ -318,6 +417,47 @@ export default function ServicesPage() {
           </Card>
         </View>
       )}
+
+      {advancePopup && (
+        <View style={styles.overlay}>
+          <Card style={styles.confirmCard}>
+            <Card.Content style={{ gap: 16 }}>
+              <Text variant="titleMedium">Valor adiantado</Text>
+              <Text variant="bodyMedium" style={{ color: "#888" }}>
+                {advancePopup.car?.model ?? "-"} — {advancePopup.car?.plate ?? "-"}
+              </Text>
+              <TextInput
+                mode="outlined"
+                label="Valor adiantado (R$)"
+                placeholder="Ex: 200,00"
+                value={advanceInput}
+                onChangeText={(text) =>
+                  setAdvanceInput(text.replace(/[^0-9.,]/g, ""))
+                }
+                keyboardType="decimal-pad"
+                autoFocus
+              />
+              <Button
+                mode="contained"
+                onPress={confirmAdvance}
+                loading={savingAdvance}
+                disabled={savingAdvance}
+              >
+                Confirmar
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => {
+                  setAdvancePopup(null);
+                  setAdvanceInput("");
+                }}
+              >
+                Cancelar
+              </Button>
+            </Card.Content>
+          </Card>
+        </View>
+      )}
     </>
   );
 }
@@ -349,9 +489,6 @@ const styles = StyleSheet.create({
   advanceBox: {
     gap: 2,
     marginTop: 4,
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
   },
   searchInputCompact: {
     minWidth: "100%",
@@ -387,23 +524,19 @@ const styles = StyleSheet.create({
   },
   leftCol: {
     flex: 2,
-    gap: 4,
     minWidth: 0,
     flexShrink: 1,
   },
   titleRow: {
     width: "100%",
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 8,
     justifyContent: "space-between",
-  },
-  statusTag: {
-    minWidth: 160,
-    alignSelf: "flex-end",
+    marginBottom: 0,
   },
   editButton: {
-    minWidth: 160,
+    minWidth: 130,
     alignSelf: "flex-end",
   },
   midCol: {
@@ -449,6 +582,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
+  statusTag: {
+    minWidth: 130,
+    alignSelf: "flex-end",
+  },
+  paymentTag: {
+    minWidth: 130,
+    alignSelf: "flex-end",
+  },
   overlay: {
     position: "absolute",
     top: 0,
@@ -463,4 +604,15 @@ const styles = StyleSheet.create({
   confirmCard: {
     borderRadius: 16,
   },
+  tagsCol: {
+    flexDirection: "column",
+    gap: 4,
+    alignItems: "flex-end",
+  },
+  priceCol: {
+    alignItems: "flex-end",
+    gap: 12,
+    justifyContent: "center",
+  },
+
 });

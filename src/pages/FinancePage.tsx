@@ -1,27 +1,33 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Card, Divider, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, formatBRL, type Service } from "@/lib/api";
 import { PageHeader } from "@/src/components/shared/PageHeader";
-import { PaymentBadge } from "@/src/components/shared/StatusBadges";
 import { StatCard } from "@/src/components/shared/StatCard";
+import { paymentColor, paymentLabels } from "@/src/pages/ServiceFormPage";
 
 export default function FinancePage() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [services, setServices] = useState<Service[]>([]);
 
-  useEffect(() => {
-    api.getServices().then(setServices).catch(() => setServices([]));
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      api.getServices().then(setServices).catch(() => setServices([]));
+    }, [])
+  );
 
   const financialSummary = useMemo(() => {
-    const totalRecebido = services.filter((s) => s.payment === "pago").reduce((a, s) => a + s.price, 0);
-    const totalAdiantado = services.filter((s) => s.payment === "adiantado").reduce((a, s) => a + s.price, 0);
-    const totalPendente = services.filter((s) => s.payment === "pendente").reduce((a, s) => a + s.price, 0);
+    const totalRecebido = services.filter((s) => s.payment === "pago" || s.status === "concluido").reduce((a, s) => a + s.price, 0);
+    const totalAdiantado = services.filter((s) => s.payment === "adiantado" && s.status !== "concluido").reduce((a, s) => a + (s.advanceAmount ?? 0), 0);
+    const totalPendente = services.filter((s) => s.status !== "concluido" && s.payment !== "pago").reduce((a, s) => {
+      const restante = s.price - (s.advanceAmount ?? 0);
+      return a + (restante > 0 ? restante : 0);
+    }, 0);
     return { totalRecebido, totalAdiantado, totalPendente };
   }, [services]);
 
@@ -30,44 +36,26 @@ export default function FinancePage() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
     >
       <PageHeader title="Financeiro" description="Acompanhe o caixa, adiantamentos e pendências." />
 
       <View style={styles.kpiGrid}>
         <View style={styles.kpiHalf}>
-          <StatCard
-            label="Caixa total"
-            value={formatBRL(total)}
-            hint="Recebido + adiantado"
-            variant="gold"
-            icon={<MaterialCommunityIcons name="wallet" size={22} color="#B8860B" />}
-          />
+          <StatCard label="Caixa total" value={formatBRL(total)} hint="Recebido + adiantado" variant="gold"
+            icon={<MaterialCommunityIcons name="wallet" size={22} color="#B8860B" />} />
         </View>
         <View style={styles.kpiHalf}>
-          <StatCard
-            label="Já recebido"
-            value={formatBRL(financialSummary.totalRecebido)}
-            variant="success"
-            icon={<MaterialCommunityIcons name="cash-check" size={22} color={theme.colors.tertiary ?? "#2E7D32"} />}
-          />
+          <StatCard label="Já recebido" value={formatBRL(financialSummary.totalRecebido)} variant="success"
+            icon={<MaterialCommunityIcons name="cash-check" size={22} color={theme.colors.tertiary ?? "#2E7D32"} />} />
         </View>
         <View style={styles.kpiHalf}>
-          <StatCard
-            label="Adiantado"
-            value={formatBRL(financialSummary.totalAdiantado)}
-            hint="Serviços a executar"
-            variant="primary"
-            icon={<MaterialCommunityIcons name="trending-up" size={22} color={theme.colors.primary} />}
-          />
+          <StatCard label="Adiantado" value={formatBRL(financialSummary.totalAdiantado)} hint="Serviços a executar" variant="primary"
+            icon={<MaterialCommunityIcons name="trending-up" size={22} color={theme.colors.primary} />} />
         </View>
         <View style={styles.kpiHalf}>
-          <StatCard
-            label="A receber"
-            value={formatBRL(financialSummary.totalPendente)}
-            variant="warning"
-            icon={<MaterialCommunityIcons name="clock-outline" size={22} color="#E65100" />}
-          />
+          <StatCard label="A receber" value={formatBRL(financialSummary.totalPendente)} variant="warning"
+            icon={<MaterialCommunityIcons name="clock-outline" size={22} color="#E65100" />} />
         </View>
       </View>
 
@@ -88,9 +76,23 @@ export default function FinancePage() {
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>
                     {(s.car && `${s.car.model} — ${s.car.plate}`) || "-"}
                   </Text>
-                  <View style={{ marginTop: 6 }}>
-                    <PaymentBadge status={s.payment} />
-                  </View>
+
+                  {/* Pagamento com cor */}
+                  <Text variant="bodySmall" style={{ marginTop: 4 }}>
+                    Pagamento: <Text style={{ color: paymentColor[s.payment] }}>{paymentLabels[s.payment]}</Text>
+                  </Text>
+
+                  {/* Adiantado e restante */}
+                  {s.payment === "adiantado" && s.advanceAmount > 0 && (
+                    <View style={styles.advanceBox}>
+                      <Text variant="bodySmall" style={{ color: "#3B82F6" }}>
+                        Adiantado: {formatBRL(s.advanceAmount)}
+                      </Text>
+                      <Text variant="bodySmall" style={{ color: "#EF4444" }}>
+                        Restante: {formatBRL(s.price - s.advanceAmount)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <Text variant="titleSmall" style={{ color: "#B8860B", paddingRight: 16, alignSelf: "flex-start" }}>
                   {formatBRL(s.price)}
@@ -107,22 +109,29 @@ export default function FinancePage() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    gap: 16,
+    gap: 16
   },
   kpiGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
+    flexDirection: "row", 
+    flexWrap: "wrap", 
+    gap: 12
   },
-  kpiHalf: {
-    width: "48%",
+  kpiHalf: { 
+    width: "48%", 
     flexGrow: 1,
-    minWidth: 140,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: 8,
-    gap: 8,
+    minWidth: 140
+   },
+  row: { 
+    flexDirection: "row", 
+    alignItems: "flex-start", 
+    paddingVertical: 8, 
+    gap: 8
+   },
+  advanceBox: { 
+    gap: 2, 
+    marginTop: 4, 
+    paddingTop: 4, 
+    borderTopWidth: 1, 
+    borderTopColor: "#2A2A2A" 
   },
 });
