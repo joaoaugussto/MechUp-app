@@ -1,16 +1,16 @@
-import './env'
 import cors from 'cors'
 import express from 'express'
+import './env'
+import { authMiddleware } from './middleware/auth'
+import adminRouter from './routes/admin'
+import authRouter from './routes/auth'
 import carsRouter from './routes/cars'
 import clientsRouter from './routes/clientes'
 import servicesRouter from './routes/services'
 import shopsRouter from './routes/shops'
-import authRouter from './routes/auth'
-import { authMiddleware } from './middleware/auth'
-import adminRouter from './routes/admin'
 
 const app = express()
-app.use(cors())
+app.use(cors({ origin: '*' }))
 app.use(express.json())
 
 app.use('/api/shops', shopsRouter)
@@ -21,9 +21,12 @@ app.use('/api/clientes', clientsRouter)
 app.use('/api/cars', carsRouter)
 app.use('/api/services', servicesRouter)
 
-const PORT = 3333
-const host = '0.0.0.0'
-app.listen(PORT, host, () => {
-  // eslint-disable-next-line no-console
-  console.log(`✅ Servidor em http://localhost:${PORT} (rede local: http://<seu-ip>:${PORT})`)
+const PORT = process.env.PORT || 3333
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' })
+})
+
+app.listen(PORT, () => {
+  console.log(`✅ Servidor rodando na porta ${PORT}`)
 })
