@@ -3,8 +3,8 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "node dist/server/index.js", 
-    "build": "tsc",
+    "start": "node dist/index.js", 
+    "build": "tsc -p tsconfig.server.json",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -12,8 +12,9 @@
     "lint": "expo lint",
     "server": "npx ts-node server/index.ts",
     "db:clear": "ts-node server/prisma/clear.ts",
-    "db:migrate": "prisma migrate deploy --schema server/prisma/schema.prisma",
-    "prisma:generate": "prisma generate --schema server/prisma/schema.prisma"
+    "db:migrate":  "prisma migrate deploy --schema server/prisma/schema.prisma",
+    "prisma:generate": "prisma generate --schema server/prisma/schema.prisma",
+    "postinstall": "prisma generate --schema server/prisma/schema.prisma"
   },
   "prisma": {
     "schema": "server/prisma/schema.prisma"

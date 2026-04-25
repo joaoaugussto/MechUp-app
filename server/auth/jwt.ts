@@ -7,11 +7,11 @@ export type JwtClaims = {
 };
 
 const JWT_SECRET = process.env.JWT_SECRET;
+// Em produção isso é obrigatório. No dev, você pode setar no .env.
+// Mantemos um fallback só para não explodir em ambiente local.
+// eslint-disable-next-line no-console
 if (!JWT_SECRET) {
-  // Em produção isso é obrigatório. No dev, você pode setar no .env.
-  // Mantemos um fallback só para não explodir em ambiente local.
-  // eslint-disable-next-line no-console
-  console.warn("⚠️ JWT_SECRET não definido. Defina em produção.");
+  throw new Error("JWT_SECRET não definido em produção");
 }
 
 export function signToken(claims: JwtClaims) {

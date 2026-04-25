@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
-import { prisma } from "../prisma/client";
 import { verifyToken } from "../auth/jwt";
+import { prisma } from "../prisma/client";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -14,8 +14,13 @@ declare global {
 }
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
-  const header = req.header("authorization") || "";
-  const [, token] = header.split(" ");
+const authHeader = req.header("authorization");
+
+if (!authHeader?.startsWith("Bearer ")) {
+  return res.status(401).json({ error: "invalid_header" });
+}
+
+const token = authHeader.split(" ")[1];
 
   if (!token) return res.status(401).json({ error: "missing_token" });
 
@@ -39,4 +44,5 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
   next();
 }
+
 
