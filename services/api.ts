@@ -1,11 +1,11 @@
-const API_URL = 'http://26.78.248.116:3333/api'
+const API_URL = 'https://mechup-app.onrender.com/api'
 
 export const api = {
   // Clients
   getClients: async () => {
     const res = await fetch(`${API_URL}/clients`)
     return res.json()
-  },
+  },  
 
   getClient: async (id: string) => {
     const res = await fetch(`${API_URL}/clients/${id}`)

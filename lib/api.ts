@@ -18,7 +18,7 @@ const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   guessLanBaseUrl() ||
   // fallback para dev local no emulador/desktop
-  "http://localhost:3333/api";
+  "https://mechup-app.onrender.com/api";
 
 let runtimeAuthToken: string | null = null;
 export function setAuthToken(token: string | null) {

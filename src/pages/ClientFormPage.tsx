@@ -18,7 +18,7 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
   const insets = useSafeAreaInsets();
   const editing = Boolean(clientId);
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState("(17)");
   const [snack, setSnack] = useState(false);
   const [snackMsg, setSnackMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -74,41 +74,59 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
             Voltar
           </Button>
 
-        <PageHeader
-          title={editing ? "Editar cliente" : "Novo cliente"}
-          description="Informe os dados de contato do cliente."
-        />
+          <PageHeader
+            title={editing ? "Editar cliente" : "Novo cliente"}
+            description="Informe os dados de contato do cliente."
+          />
 
           <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
             <Card.Content style={{ gap: 16, paddingTop: 16 }}>
-            <TextInput mode="outlined" label="Nome completo" placeholder="Ex: João Pereira" value={name} onChangeText={setName} />
-            <TextInput mode="outlined" label="Telefone" placeholder="(11) 99999-9999" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-            <View style={styles.actions}>
-              <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving}>
-                {editing ? "Salvar alterações" : "Cadastrar cliente"}
-              </Button>
-              {editing ? (
-                <Button
-                  mode="outlined"
-                  textColor={theme.colors.error}
-                  icon="delete"
-                  onPress={async () => {
-                    try {
-                      if (!clientId) return;
-                      await api.deleteClient(clientId);
-                      setSnackMsg("Cliente excluído com sucesso.");
-                      setSnack(true);
-                      router.back();
-                    } catch {
-                      setSnackMsg("Erro ao excluir cliente.");
-                      setSnack(true);
-                    }
-                  }}
-                >
-                  Excluir
+              <TextInput mode="outlined" 
+              label="Nome completo" 
+              placeholder="Ex: João Pereira"
+               value={name} onChangeText={setName} 
+               />
+              <TextInput
+                mode="outlined"
+                label="Telefone"
+                value={phone}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/\D/g, "");
+                  let masked = cleaned;
+                  if (cleaned.length <= 2) masked = cleaned;
+                  else if (cleaned.length <= 7) masked = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+                  else masked = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
+                  setPhone(masked);
+                }}
+                keyboardType="phone-pad"
+                maxLength={15}
+              />
+              <View style={styles.actions}>
+                <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving}>
+                  {editing ? "Salvar alterações" : "Cadastrar cliente"}
                 </Button>
-              ) : null}
-            </View>
+                {editing ? (
+                  <Button
+                    mode="outlined"
+                    textColor={theme.colors.error}
+                    icon="delete"
+                    onPress={async () => {
+                      try {
+                        if (!clientId) return;
+                        await api.deleteClient(clientId);
+                        setSnackMsg("Cliente excluído com sucesso.");
+                        setSnack(true);
+                        router.back();
+                      } catch {
+                        setSnackMsg("Erro ao excluir cliente.");
+                        setSnack(true);
+                      }
+                    }}
+                  >
+                    Excluir
+                  </Button>
+                ) : null}
+              </View>
             </Card.Content>
           </Card>
         </ScrollView>
