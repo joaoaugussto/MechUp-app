@@ -1,13 +1,12 @@
+import { AuthProvider, useAuth } from "@/src/auth/AuthProvider";
+import { AppThemeProvider, useThemeMode } from "@/src/contexts/ThemeContext";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo } from "react";
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from "react-native-paper";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
-
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { AuthProvider, useAuth } from "@/src/auth/AuthProvider";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -15,29 +14,32 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
+    <AppThemeProvider>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+    </AppThemeProvider>
   );
 }
 
 function RootNavigator() {
-  const colorScheme = useColorScheme();
-  const navigationTheme = colorScheme === "dark" ? DarkTheme : DefaultTheme;
+  const { isDark } = useThemeMode();  // ← adiciona essa linha
+  const navigationTheme = isDark ? DarkTheme : DefaultTheme;  // ← troca colorScheme por isDark
   const pathname = usePathname();
   const router = useRouter();
   const { loading, token } = useAuth();
 
+
   const paperTheme = useMemo(() => {
-    const base = colorScheme === "dark" ? MD3DarkTheme : MD3LightTheme;
+    const base = isDark ? MD3DarkTheme : MD3LightTheme;  // ← troca colorScheme por isDark
     return {
       ...base,
       colors: {
         ...base.colors,
-        tertiary: colorScheme === "dark" ? "#81C784" : "#2E7D32",
+        tertiary: isDark ? "#81C784" : "#2E7D32",  // ← troca colorScheme por isDark
       },
     };
-  }, [colorScheme]);
+  }, [isDark]);
 
   useEffect(() => {
     if (loading) return;

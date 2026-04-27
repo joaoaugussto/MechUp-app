@@ -27,6 +27,7 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
   const [snack, setSnack] = useState(false);
   const [snackMsg, setSnackMsg] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     api.getClients().then(setClients).catch(() => setClients([]));
@@ -79,6 +80,18 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
       setSnack(true);
     }
   };
+  const handleDelete = async () => {
+    try {
+      if (!carId) return;
+      await api.deleteCar(carId);
+      setSnackMsg("Carro excluído com sucesso.");
+      setSnack(true);
+      router.back();
+    } catch {
+      setSnackMsg("Erro ao excluir carro.");
+      setSnack(true);
+    }
+  };
 
   return (
     <>
@@ -97,48 +110,37 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
             Voltar
           </Button>
 
-        <PageHeader title={editing ? "Editar carro" : "Novo carro"} description="Vincule um veículo a um cliente existente." />
+          <PageHeader title={editing ? "Editar carro" : "Novo carro"} description="Vincule um veículo a um cliente existente." />
 
           <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
             <Card.Content style={{ gap: 16, paddingTop: 16 }}>
-            <TextInput mode="outlined" label="Apelido / nome" placeholder="Ex: Civic do João" value={name} onChangeText={setName} />
-            <TextInput mode="outlined" label="Modelo" placeholder="Honda Civic" value={model} onChangeText={setModel} />
-            <TextInput mode="outlined" label="Placa" placeholder="ABC-1D23" value={plate} onChangeText={setPlate} autoCapitalize="characters" />
-            <TextInput mode="outlined" label="Ano" placeholder="2020" value={year} onChangeText={setYear} keyboardType="number-pad" />
+              <TextInput mode="outlined" label="Apelido / nome" placeholder="Ex: Civic do João" value={name} onChangeText={setName} />
+              <TextInput mode="outlined" label="Modelo" placeholder="Honda Civic" value={model} onChangeText={setModel} />
+              <TextInput mode="outlined" label="Placa" placeholder="ABC-1D23" value={plate} onChangeText={setPlate} autoCapitalize="characters" />
+              <TextInput mode="outlined" label="Ano" placeholder="2020" value={year} onChangeText={setYear} keyboardType="number-pad" />
 
-            <Text variant="labelLarge">Cliente</Text>
-            <Menu visible={menuOpen} onDismiss={() => setMenuOpen(false)} anchor={<Button mode="outlined" onPress={() => setMenuOpen(true)}>{clientLabel}</Button>}>
-              {clients.map((c) => (
-                <Menu.Item key={c.id} onPress={() => { setClientId(c.id); setMenuOpen(false); }} title={c.name} />
-              ))}
-            </Menu>
+              <Text variant="labelLarge">Cliente</Text>
+              <Menu visible={menuOpen} onDismiss={() => setMenuOpen(false)} anchor={<Button mode="outlined" onPress={() => setMenuOpen(true)}>{clientLabel}</Button>}>
+                {clients.map((c) => (
+                  <Menu.Item key={c.id} onPress={() => { setClientId(c.id); setMenuOpen(false); }} title={c.name} />
+                ))}
+              </Menu>
 
-            <View style={styles.actions}>
-              <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving}>
-                {editing ? "Salvar alterações" : "Cadastrar carro"}
-              </Button>
-              {editing ? (
-                <Button
-                  mode="outlined"
-                  textColor={theme.colors.error}
-                  icon="delete"
-                  onPress={async () => {
-                    try {
-                      if (!carId) return;
-                      await api.deleteCar(carId);
-                      setSnackMsg("Carro excluído com sucesso.");
-                      setSnack(true);
-                      router.back();
-                    } catch {
-                      setSnackMsg("Erro ao excluir carro.");
-                      setSnack(true);
-                    }
-                  }}
-                >
-                  Excluir
+              <View style={styles.actions}>
+                <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving}>
+                  {editing ? "Salvar alterações" : "Cadastrar carro"}
                 </Button>
-              ) : null}
-            </View>
+                {editing ? (
+                  <Button
+                    mode="outlined"
+                    textColor={theme.colors.error}
+                    icon="delete"
+                    onPress={() => setConfirmDelete(true)}
+                  >
+                    Excluir
+                  </Button>
+                ) : null}
+              </View>
             </Card.Content>
           </Card>
         </ScrollView>
@@ -146,6 +148,34 @@ export default function CarFormPage({ carId }: CarFormPageProps) {
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2000}>
         {snackMsg}
       </Snackbar>
+
+      {confirmDelete && (
+        <View style={styles.overlay}>
+          <Card style={styles.confirmCard}>
+            <Card.Content style={{ gap: 12 }}>
+              <Text variant="titleMedium">Excluir carro?</Text>
+              <Text variant="bodyMedium" style={{ color: "#888" }}>
+                Essa ação não pode ser desfeita.
+              </Text>
+              <Button
+                mode="contained"
+                buttonColor={theme.colors.error}
+                textColor="#fff"
+                icon="delete"
+                onPress={() => {
+                  setConfirmDelete(false);
+                  void handleDelete();
+                }}
+              >
+                Sim, excluir
+              </Button>
+              <Button mode="outlined" onPress={() => setConfirmDelete(false)}>
+                Cancelar
+              </Button>
+            </Card.Content>
+          </Card>
+        </View>
+      )}
     </>
   );
 }
@@ -161,5 +191,16 @@ const styles = StyleSheet.create({
   actions: {
     gap: 8,
     marginTop: 8,
+  },
+  overlay: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    zIndex: 99,
+  },
+  confirmCard: {
+    borderRadius: 16,
   },
 });

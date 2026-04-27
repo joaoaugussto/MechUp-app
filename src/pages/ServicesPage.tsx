@@ -90,7 +90,7 @@ export default function ServicesPage() {
         carId: service.carId,
         clientId: service.clientId,
       });
-      setServices((prev) => prev.map((s) => (s.id === service.id ? { ...s, status: next } : s)));
+    setServices((prev) => prev.map((s) => (s.id === service.id ? { ...s, status: next } : s)));
     } finally {
       setUpdatingStatusId(null);
       setStatusMenuFor(null);
@@ -350,9 +350,11 @@ export default function ServicesPage() {
                           <Text variant="bodySmall" style={{ color: "#3B82F6" }}>
                             Adiantado: {formatBRL(s.advanceAmount)}
                           </Text>
-                          <Text variant="bodySmall" style={{ color: "#EF4444" }}>
-                            Restante: {formatBRL(s.price - s.advanceAmount)}
-                          </Text>
+                          {s.price - s.advanceAmount > 0 && (
+                            <Text variant="bodySmall" style={{ color: "#EF4444" }}>
+                              Restante: {formatBRL(s.price - s.advanceAmount)}
+                            </Text>
+                          )}
                         </View>
                       )}
                     </View>

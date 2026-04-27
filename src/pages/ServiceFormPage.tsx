@@ -79,6 +79,7 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
   const [snackMsg, setSnackMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [advanceAmount, setAdvanceAmount] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     api
@@ -159,13 +160,15 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
         dueDate: dueDateIso,
       };
       if (editing && serviceId) {
-        await api.updateService(serviceId, payload);
+        const updated = await api.updateService(serviceId, payload);
+        // Atualiza os estados com o que o backend retornou
+        setPayment(updated.payment);
+        setAdvanceAmount(String(updated.advanceAmount ?? 0));
         setSnackMsg("Serviço atualizado com sucesso.");
       } else {
-        await api.createService(payload);
+       await api.createService(payload);  
         setSnackMsg("Serviço cadastrado com sucesso.");
-        router.replace("/services");
-        return;
+        router.replace("/services");  
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -178,6 +181,18 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
       }
     } finally {
       setSaving(false);
+      setSnack(true);
+    }
+  };
+  const handleDelete = async () => {
+    try {
+      if (!serviceId) return;
+      await api.deleteService(serviceId);
+      setSnackMsg("Serviço excluído com sucesso.");
+      setSnack(true);
+      router.back();
+    } catch {
+      setSnackMsg("Erro ao excluir serviço.");
       setSnack(true);
     }
   };
@@ -267,19 +282,26 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
               </Menu>
 
               {payment === "adiantado" && (
-                <TextInput
-                  mode="outlined"
-                  label="Valor adiantado (R$)"
-                  placeholder="Ex: 150.00"
-                  value={advanceAmount}
-                  onChangeText={(text) => {
-                    const cleaned = text.replace(/[^0-9.,]/g, "");
-                    setAdvanceAmount(cleaned);
-                  }}
-                  keyboardType="decimal-pad"
-                />
+                <>
+                  <TextInput
+                    mode="outlined"
+                    label="Valor adiantado (R$)"
+                    placeholder="Ex: 150.00"
+                    value={advanceAmount}
+                    onChangeText={(text) => {
+                      const cleaned = text.replace(/[^0-9.,]/g, "");
+                      setAdvanceAmount(cleaned);
+                    }}
+                    keyboardType="decimal-pad"
+                  />
+                  {Number(advanceAmount) >= Number(price) && Number(price) > 0 && (
+                    <Text variant="bodySmall" style={{ color: "#22C55E" }}>
+                      ✓ Valor adiantado cobre o total — será marcado como Pago automaticamente.
+                    </Text>
+                  )}
+                </>
               )}
-              
+
               <TextInput
                 mode="outlined"
                 label="Previsão (DD/MM/AAAA)"
@@ -305,18 +327,7 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
                     mode="outlined"
                     textColor={theme.colors.error}
                     icon="delete"
-                    onPress={async () => {
-                      try {
-                        if (!serviceId) return;
-                        await api.deleteService(serviceId);
-                        setSnackMsg("Serviço excluído com sucesso.");
-                        setSnack(true);
-                        router.back();
-                      } catch {
-                        setSnackMsg("Erro ao excluir serviço.");
-                        setSnack(true);
-                      }
-                    }}
+                    onPress={() => setConfirmDelete(true)}
                   >
                     Excluir
                   </Button>
@@ -329,6 +340,34 @@ export default function ServiceFormPage({ serviceId }: ServiceFormPageProps) {
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2000}>
         {snackMsg}
       </Snackbar>
+
+      {confirmDelete && (
+        <View style={styles.overlay}>
+          <Card style={styles.confirmCard}>
+            <Card.Content style={{ gap: 12 }}>
+              <Text variant="titleMedium">Excluir serviço?</Text>
+              <Text variant="bodyMedium" style={{ color: "#888" }}>
+                Essa ação não pode ser desfeita.
+              </Text>
+              <Button
+                mode="contained"
+                buttonColor={theme.colors.error}
+                textColor="#fff"
+                icon="delete"
+                onPress={() => {
+                  setConfirmDelete(false);
+                  void handleDelete();
+                }}
+              >
+                Sim, excluir
+              </Button>
+              <Button mode="outlined" onPress={() => setConfirmDelete(false)}>
+                Cancelar
+              </Button>
+            </Card.Content>
+          </Card>
+        </View>
+      )}
     </>
   );
 }
@@ -347,5 +386,16 @@ const styles = StyleSheet.create({
   },
   warningBox: {
     gap: 8,
+  },
+  overlay: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    zIndex: 99,
+  },
+  confirmCard: {
+    borderRadius: 16,
   },
 });

@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
-import { Button, Card, Snackbar, TextInput, useTheme } from "react-native-paper";
+import { Button, Card, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/lib/api";
@@ -22,6 +22,7 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
   const [snack, setSnack] = useState(false);
   const [snackMsg, setSnackMsg] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (!clientId) return;
@@ -57,6 +58,19 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      if (!clientId) return;
+      await api.deleteClient(clientId);
+      setSnackMsg("Cliente excluído com sucesso.");
+      setSnack(true);
+      router.back();
+    } catch {
+      setSnackMsg("Erro ao excluir cliente.");
+      setSnack(true);
+    }
+  };
+
   return (
     <>
       <KeyboardAvoidingView
@@ -81,11 +95,11 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
 
           <Card mode="outlined" style={{ borderColor: theme.colors.outlineVariant }}>
             <Card.Content style={{ gap: 16, paddingTop: 16 }}>
-              <TextInput mode="outlined" 
-              label="Nome completo" 
-              placeholder="Ex: João Pereira"
-               value={name} onChangeText={setName} 
-               />
+              <TextInput mode="outlined"
+                label="Nome completo"
+                placeholder="Ex: João Pereira"
+                value={name} onChangeText={setName}
+              />
               <TextInput
                 mode="outlined"
                 label="Telefone"
@@ -110,18 +124,7 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
                     mode="outlined"
                     textColor={theme.colors.error}
                     icon="delete"
-                    onPress={async () => {
-                      try {
-                        if (!clientId) return;
-                        await api.deleteClient(clientId);
-                        setSnackMsg("Cliente excluído com sucesso.");
-                        setSnack(true);
-                        router.back();
-                      } catch {
-                        setSnackMsg("Erro ao excluir cliente.");
-                        setSnack(true);
-                      }
-                    }}
+                    onPress={() => setConfirmDelete(true)}
                   >
                     Excluir
                   </Button>
@@ -134,6 +137,34 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2000}>
         {snackMsg}
       </Snackbar>
+      {confirmDelete && (
+        <View style={styles.overlay}>
+          <Card style={styles.confirmCard}>
+            <Card.Content style={{ gap: 12 }}>
+              <Text variant="titleMedium">Excluir cliente?</Text>
+              <Text variant="bodyMedium" style={{ color: "#888" }}>
+                Essa ação não pode ser desfeita.
+              </Text>
+              <Button
+                mode="contained"
+                buttonColor={theme.colors.error}
+                textColor="#fff"
+                icon="delete"
+                onPress={() => {
+                  setConfirmDelete(false);
+                  void handleDelete();
+                }}
+              >
+                Sim, excluir
+              </Button>
+              <Button mode="outlined" onPress={() => setConfirmDelete(false)}>
+                Cancelar
+              </Button>
+            </Card.Content>
+          </Card>
+        </View>
+      )}
+
     </>
   );
 }
@@ -149,5 +180,16 @@ const styles = StyleSheet.create({
   actions: {
     gap: 8,
     marginTop: 8,
+  },
+  overlay: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    zIndex: 99,
+  },
+  confirmCard: {
+    borderRadius: 16,
   },
 });

@@ -1,12 +1,16 @@
+import { useThemeMode } from "@/src/contexts/ThemeContext";
 import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Divider, Snackbar, Switch, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PageHeader } from "@/src/components/shared/PageHeader";
+import { useRouter } from "expo-router";
+import { useAuth } from "../auth/AuthProvider";
 
 export default function SettingsPage() {
   const theme = useTheme();
+  const { isDark, toggleTheme } = useThemeMode();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
   const [shop, setShop] = useState("");
@@ -14,7 +18,9 @@ export default function SettingsPage() {
   const [snack, setSnack] = useState(false);
   const [osNotif, setOsNotif] = useState(true);
   const [payNotif, setPayNotif] = useState(true);
-  const [darkAlways, setDarkAlways] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const { logout } = useAuth();
+  const router = useRouter();
 
   return (
     <>
@@ -55,10 +61,10 @@ export default function SettingsPage() {
             />
             <Divider />
             <SettingRow
-              label="Modo escuro fixo"
-              description="Força tema escuro neste aparelho (visual)."
-              value={darkAlways}
-              onValueChange={setDarkAlways}
+              label="Modo escuro"
+              description="Alterna entre tema claro e escuro."
+              value={isDark}
+              onValueChange={toggleTheme}
             />
           </Card.Content>
         </Card>
@@ -66,7 +72,12 @@ export default function SettingsPage() {
         <Card mode="outlined" style={[styles.dangerCard, { borderColor: theme.colors.error }]}>
           <Card.Title title="Conta" titleStyle={{ color: theme.colors.error }} />
           <Card.Content>
-            <Button mode="outlined" textColor={theme.colors.error} icon="logout" onPress={() => setSnack(true)}>
+            <Button
+              mode="outlined"
+              textColor={theme.colors.error}
+              icon="logout"
+              onPress={() => setConfirmLogout(true)}
+            >
               Sair da conta
             </Button>
           </Card.Content>
@@ -75,6 +86,35 @@ export default function SettingsPage() {
       <Snackbar visible={snack} onDismiss={() => setSnack(false)} duration={2500} style={{ marginBottom: insets.bottom }}>
         Ação registrada.
       </Snackbar>
+
+      {confirmLogout && (
+        <View style={styles.overlay}>
+          <Card style={styles.confirmCard}>
+            <Card.Content style={{ gap: 12 }}>
+              <Text variant="titleMedium">Sair da conta?</Text>
+              <Text variant="bodyMedium" style={{ color: "#888" }}>
+                Você precisará fazer login novamente.
+              </Text>
+              <Button
+                mode="contained"
+                buttonColor={theme.colors.error}
+                textColor="#fff"
+                icon="logout"
+                onPress={async () => {
+                  setConfirmLogout(false);
+                  await logout();
+                  router.replace("/login");
+                }}
+              >
+                Sim, sair
+              </Button>
+              <Button mode="outlined" onPress={() => setConfirmLogout(false)}>
+                Cancelar
+              </Button>
+            </Card.Content>
+          </Card>
+        </View>
+      )}
     </>
   );
 }
@@ -120,5 +160,16 @@ const styles = StyleSheet.create({
   },
   dangerCard: {
     marginBottom: 8,
+  },
+  overlay: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    zIndex: 99,
+  },
+  confirmCard: {
+    borderRadius: 16,
   },
 });

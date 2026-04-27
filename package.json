@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "node dist/index.js", 
+    "start": "node dist/index.js",
     "build": "tsc -p tsconfig.server.json",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
@@ -12,7 +12,7 @@
     "lint": "expo lint",
     "server": "npx ts-node server/index.ts",
     "db:clear": "ts-node server/prisma/clear.ts",
-    "db:migrate":  "prisma migrate deploy --schema server/prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy --schema server/prisma/schema.prisma",
     "prisma:generate": "prisma generate --schema server/prisma/schema.prisma",
     "postinstall": "prisma generate --schema server/prisma/schema.prisma"
   },
@@ -24,6 +24,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@prisma/adapter-neon": "^7.7.0",
     "@prisma/client": "^5.22.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.15.9",
     "@react-navigation/drawer": "^7.9.8",
     "@react-navigation/elements": "^2.6.3",
