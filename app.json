@@ -5,29 +5,35 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
+
+    // ✅ ADICIONAR — splash global (iOS usa isso)
     "splash": {
       "image": "./assets/images/splash-icon.png",
-      "resizeMode": "cover",
+      "resizeMode": "contain",
       "backgroundColor": "#0A0A0A"
     },
+
     "android": {
       "package": "com.cuiscuiz1.mechup",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0A0A0A"
       },
+
+      // ✅ SIMPLIFICAR — no Android 12+ a imagem é ignorada de qualquer forma
+      // Só manter backgroundColor pra combinar com sua splash customizada
       "splash": {
-        "image": "./assets/images/splash-icon.png",
-        "resizeMode": "cover",
         "backgroundColor": "#0A0A0A"
       }
     },
+
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-splash-screen" // ✅ ADICIONAR
     ],
     "extra": {
       "eas": {
