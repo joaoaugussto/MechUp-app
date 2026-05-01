@@ -1,3 +1,4 @@
+import { useNotifications } from '@/hooks/useNotifications';
 import { AuthProvider, useAuth } from "@/src/auth/AuthProvider";
 import { AppThemeProvider, useThemeMode } from "@/src/contexts/ThemeContext";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
@@ -28,7 +29,7 @@ function RootNavigator() {
   const pathname = usePathname();
   const router = useRouter();
   const { loading, token } = useAuth();
-
+  useNotifications();
 
   const paperTheme = useMemo(() => {
     const base = isDark ? MD3DarkTheme : MD3LightTheme;  // ← troca colorScheme por isDark

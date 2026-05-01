@@ -18,7 +18,7 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
   const insets = useSafeAreaInsets();
   const editing = Boolean(clientId);
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("(17)");
+  const [phone, setPhone] = useState("");
   const [snack, setSnack] = useState(false);
   const [snackMsg, setSnackMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -103,17 +103,23 @@ export default function ClientFormPage({ clientId }: ClientFormPageProps) {
               <TextInput
                 mode="outlined"
                 label="Telefone"
+                placeholder="(17) 99999-9999"
                 value={phone}
                 onChangeText={(text) => {
+                  // Remove tudo que não é número
                   const cleaned = text.replace(/\D/g, "");
-                  let masked = cleaned;
-                  if (cleaned.length <= 2) masked = cleaned;
-                  else if (cleaned.length <= 7) masked = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
-                  else masked = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
+                  // Limita a 11 dígitos (DDD + 9 números)
+                  const limited = cleaned.slice(0, 11);
+                  // Aplica a máscara
+                  let masked = limited;
+                  if (limited.length <= 2) masked = limited;
+                  else if (limited.length <= 7) masked = `(${limited.slice(0, 2)}) ${limited.slice(2)}`;
+                  else masked = `(${limited.slice(0, 2)}) ${limited.slice(2, 7)}-${limited.slice(7, 11)}`;
                   setPhone(masked);
                 }}
                 keyboardType="phone-pad"
                 maxLength={15}
+                left={<TextInput.Icon icon="phone" />}
               />
               <View style={styles.actions}>
                 <Button mode="contained" icon="content-save" onPress={submit} loading={saving} disabled={saving}>

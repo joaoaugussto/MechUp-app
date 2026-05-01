@@ -90,7 +90,7 @@ export default function ServicesPage() {
         carId: service.carId,
         clientId: service.clientId,
       });
-    setServices((prev) => prev.map((s) => (s.id === service.id ? { ...s, status: next } : s)));
+      setServices((prev) => prev.map((s) => (s.id === service.id ? { ...s, status: next } : s)));
     } finally {
       setUpdatingStatusId(null);
       setStatusMenuFor(null);
@@ -158,7 +158,7 @@ export default function ServicesPage() {
     }
     setSavingAdvance(true);
     try {
-      await api.updateService(advancePopup.id, {
+      const updated = await api.updateService(advancePopup.id, {
         title: advancePopup.title,
         description: advancePopup.description,
         status: advancePopup.status,
@@ -169,10 +169,11 @@ export default function ServicesPage() {
         carId: advancePopup.carId,
         clientId: advancePopup.clientId,
       });
+      // Usa o que o backend retornou — já com a lógica de pago automático
       setServices((prev) =>
         prev.map((s) =>
           s.id === advancePopup.id
-            ? { ...s, payment: "adiantado", advanceAmount: parsed }
+            ? { ...s, payment: updated.payment, advanceAmount: updated.advanceAmount }
             : s
         )
       );

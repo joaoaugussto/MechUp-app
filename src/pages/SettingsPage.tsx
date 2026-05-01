@@ -1,11 +1,11 @@
+import { loadNotifPreference, saveNotifPreference } from '@/services/notificationService';
+import { PageHeader } from "@/src/components/shared/PageHeader";
 import { useThemeMode } from "@/src/contexts/ThemeContext";
-import { useState } from "react";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, Divider, Snackbar, Switch, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import { PageHeader } from "@/src/components/shared/PageHeader";
-import { useRouter } from "expo-router";
 import { useAuth } from "../auth/AuthProvider";
 
 export default function SettingsPage() {
@@ -21,6 +21,19 @@ export default function SettingsPage() {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { logout } = useAuth();
   const router = useRouter();
+
+  function handleOsNotif(v: boolean) {
+    setOsNotif(v);
+    saveNotifPreference('osNotif', v);
+  }
+  function handlePayNotif(v: boolean) {
+    setPayNotif(v);
+    saveNotifPreference('payNotif', v);
+  }
+  useEffect(() => {
+    loadNotifPreference('osNotif').then(setOsNotif);
+    loadNotifPreference('payNotif').then(setPayNotif);
+  }, []);
 
   return (
     <>
@@ -50,14 +63,14 @@ export default function SettingsPage() {
               label="Notificações de OS"
               description="Alertas quando um serviço estiver próximo do prazo."
               value={osNotif}
-              onValueChange={setOsNotif}
+              onValueChange={handleOsNotif}
             />
             <Divider />
             <SettingRow
               label="Pagamentos pendentes"
               description="Lembretes de cobranças em aberto."
               value={payNotif}
-              onValueChange={setPayNotif}
+              onValueChange={handlePayNotif}
             />
             <Divider />
             <SettingRow
