@@ -1,34 +1,19 @@
-import { SplashScreenView } from "@/components/SplashScreenView";
 import { useNotifications } from '@/hooks/useNotifications';
 import { AuthProvider, useAuth } from "@/src/auth/AuthProvider";
 import { AppThemeProvider, useThemeMode } from "@/src/contexts/ThemeContext";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack, usePathname, useRouter } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from "react-native-paper";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-
-SplashScreen.preventAutoHideAsync(); // ✅ fora do componente, executa imediatamente
 
 export const unstable_settings = {
   anchor: "(tabs)",
 };
 
 export default function RootLayout() {
-  const [appReady, setAppReady] = useState(false); // ✅ controla quando sair da splash
-
-  const handleReady = useCallback(() => {
-    setAppReady(true);
-  }, []);
-
-  // ✅ enquanto não estiver pronto, mostra sua splash customizada
-  if (!appReady) {
-    return <SplashScreenView onReady={handleReady} />;
-  }
-
   return (
     <AppThemeProvider>
       <AuthProvider>

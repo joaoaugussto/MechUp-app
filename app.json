@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
 
-    // ✅ ADICIONAR — splash global (iOS usa isso)
+    // ADICIONAR — splash global (iOS usa isso)
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -15,7 +15,7 @@
 
     "android": {
       "package": "com.cuiscuiz1.mechup",
-      "adaptiveIcon": {
+      "adaptiveIcon": { 
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0A0A0A"
       }
